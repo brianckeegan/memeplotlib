@@ -1,11 +1,24 @@
 # memeplotlib
 
+[![PyPI version](https://img.shields.io/pypi/v/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
+[![conda-forge version](https://img.shields.io/conda/vn/conda-forge/memeplotlib.svg)](https://anaconda.org/conda-forge/memeplotlib)
+[![Python versions](https://img.shields.io/pypi/pyversions/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 Memes with Python's matplotlib. Create image macro memes using matplotlib for rendering and the [memegen](https://github.com/jacebrowning/memegen) API for template discovery.
 
 ## Installation
 
+**pip:**
+
 ```bash
 pip install memeplotlib
+```
+
+**conda:**
+
+```bash
+conda install -c conda-forge memeplotlib
 ```
 
 ## Quick Start
