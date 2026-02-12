@@ -54,6 +54,16 @@ def _resolve_font(font: str) -> str:
 
     Falls back to the bundled Anton font (Impact-like), then to DejaVu Sans
     if neither the requested font nor the bundled font is available.
+
+    Parameters
+    ----------
+    font : str
+        Friendly font name (e.g., ``"impact"``, ``"comic"``).
+
+    Returns
+    -------
+    str
+        Resolved font family name suitable for matplotlib.
     """
     _register_bundled_fonts()
 
@@ -92,7 +102,24 @@ def _auto_fontsize(
 ) -> float:
     """Estimate an initial font size based on text length and box dimensions.
 
-    This is a starting heuristic; _fit_text_to_box refines it further.
+    This is a starting heuristic; :func:`_fit_text_to_box` refines it
+    further using the actual renderer.
+
+    Parameters
+    ----------
+    text : str
+        The text to size.
+    box_width_frac : float
+        Bounding box width as a fraction of the figure (0.0 to 1.0).
+    box_height_frac : float
+        Bounding box height as a fraction of the figure (0.0 to 1.0).
+    base_size : float, optional
+        Starting font size in points (default: 36.0).
+
+    Returns
+    -------
+    float
+        Estimated font size in points.
     """
     num_lines = text.count("\n") + 1
     max_line_len = max(len(line) for line in text.split("\n"))
@@ -108,7 +135,18 @@ def _auto_fontsize(
 
 
 def _get_renderer(fig: Figure) -> matplotlib.backend_bases.RendererBase:
-    """Get a renderer from a figure, handling API differences across versions."""
+    """Get a renderer from a figure, handling API differences across versions.
+
+    Parameters
+    ----------
+    fig : Figure
+        The matplotlib figure.
+
+    Returns
+    -------
+    matplotlib.backend_bases.RendererBase
+        The figure's renderer.
+    """
     canvas = fig.canvas
     if hasattr(canvas, "get_renderer"):
         try:
@@ -129,7 +167,21 @@ def _fit_text_to_box(
 ) -> None:
     """Iteratively reduce font size until text fits within the bounding box.
 
-    Uses matplotlib's renderer to measure actual text extent in axes coordinates.
+    Uses matplotlib's renderer to measure actual text extent in axes
+    coordinates.
+
+    Parameters
+    ----------
+    ax : Axes
+        The axes containing the text.
+    txt : Text
+        The matplotlib Text object to resize.
+    box_w : float
+        Maximum width in axes-fraction coordinates.
+    box_h : float
+        Maximum height in axes-fraction coordinates.
+    min_fontsize : float, optional
+        Minimum allowed font size in points (default: 8.0).
     """
     fig = ax.get_figure()
     renderer = _get_renderer(fig)
@@ -173,20 +225,34 @@ def _draw_meme_text(
 ) -> Text:
     """Draw meme-style text with outline at the given axes-coordinate position.
 
-    Args:
-        ax: The matplotlib axes to draw on.
-        text: The text to render.
-        x: X position in axes coordinates (0-1).
-        y: Y position in axes coordinates (0-1, 0=bottom).
-        pos: TextPosition describing the text box.
-        font: Font family name.
-        color: Text fill color.
-        outline_color: Text outline/stroke color.
-        outline_width: Outline stroke width.
-        fontsize: Font size in points (auto-calculated if None).
-        style: Text style ("upper", "lower", "none").
+    Parameters
+    ----------
+    ax : Axes
+        The matplotlib axes to draw on.
+    text : str
+        The text to render.
+    x : float
+        X position in axes coordinates (0--1).
+    y : float
+        Y position in axes coordinates (0--1, 0=bottom).
+    pos : TextPosition
+        TextPosition describing the text box dimensions and alignment.
+    font : str, optional
+        Font family name (default: ``"impact"``).
+    color : str, optional
+        Text fill color (default: ``"white"``).
+    outline_color : str, optional
+        Text outline/stroke color (default: ``"black"``).
+    outline_width : float, optional
+        Outline stroke width (default: 2.0).
+    fontsize : float or None, optional
+        Font size in points. Auto-calculated if ``None``.
+    style : str, optional
+        Text style (``"upper"``, ``"lower"``, ``"none"``).
 
-    Returns:
+    Returns
+    -------
+    Text
         The matplotlib Text object.
     """
     display_text = apply_style(text, style)
@@ -227,6 +293,18 @@ def _smart_wrap(text: str, box_width_frac: float) -> str:
     """Wrap text based on the available box width.
 
     Already-wrapped text (containing newlines) is left as-is.
+
+    Parameters
+    ----------
+    text : str
+        The text to potentially wrap.
+    box_width_frac : float
+        Available box width as a fraction of the figure (0.0 to 1.0).
+
+    Returns
+    -------
+    str
+        Text with newlines inserted at wrap points, if needed.
     """
     if "\n" in text:
         return text
@@ -259,22 +337,37 @@ def render_meme(
 ) -> tuple[Figure, Axes]:
     """Render a meme image using matplotlib.
 
-    Args:
-        template: The Template to render.
-        lines: Text lines for each text position.
-        ax: Optional existing axes to render onto.
-        figsize: Figure size in inches (width, height).
-        dpi: Dots per inch for rendering.
-        font: Font family name.
-        color: Text fill color.
-        outline_color: Text outline color.
-        outline_width: Outline stroke width.
-        fontsize: Font size in points (auto if None).
-        style: Text style ("upper", "lower", "none").
-        cache: Optional template cache.
+    Parameters
+    ----------
+    template : Template
+        The Template to render.
+    lines : list of str
+        Text lines for each text position.
+    ax : Axes or None, optional
+        Existing axes to render onto. A new figure is created if ``None``.
+    figsize : tuple of (float, float) or None, optional
+        Figure size in inches ``(width, height)``.
+    dpi : int or None, optional
+        Dots per inch for rendering.
+    font : str or None, optional
+        Font family name.
+    color : str or None, optional
+        Text fill color.
+    outline_color : str or None, optional
+        Text outline color.
+    outline_width : float or None, optional
+        Outline stroke width.
+    fontsize : float or None, optional
+        Font size in points (auto if ``None``).
+    style : str or None, optional
+        Text style (``"upper"``, ``"lower"``, ``"none"``).
+    cache : TemplateCache or None, optional
+        Template cache for image retrieval.
 
-    Returns:
-        Tuple of (Figure, Axes).
+    Returns
+    -------
+    tuple of (Figure, Axes)
+        The matplotlib Figure and Axes containing the rendered meme.
     """
     # Apply defaults from config
     dpi = dpi or config.dpi
@@ -347,19 +440,32 @@ def render_memify(
     Creates a transparent overlay axes spanning the full figure and draws
     meme-style text on top.
 
-    Args:
-        fig: The matplotlib figure to add text to.
-        lines: Text lines to overlay.
-        position: Layout preset — "top-bottom", "top", "bottom", or "center".
-        font: Font family name.
-        color: Text fill color.
-        outline_color: Text outline color.
-        outline_width: Outline stroke width.
-        fontsize: Font size in points (auto if None).
-        style: Text style ("upper", "lower", "none").
+    Parameters
+    ----------
+    fig : Figure
+        The matplotlib figure to add text to.
+    lines : list of str
+        Text lines to overlay.
+    position : str, optional
+        Layout preset -- ``"top-bottom"`` (default), ``"top"``,
+        ``"bottom"``, or ``"center"``.
+    font : str or None, optional
+        Font family name.
+    color : str or None, optional
+        Text fill color.
+    outline_color : str or None, optional
+        Text outline color.
+    outline_width : float or None, optional
+        Outline stroke width.
+    fontsize : float or None, optional
+        Font size in points (auto if ``None``).
+    style : str or None, optional
+        Text style (``"upper"``, ``"lower"``, ``"none"``).
 
-    Returns:
-        The modified Figure.
+    Returns
+    -------
+    Figure
+        The modified Figure with meme text overlay.
     """
     font = font or config.font
     color = color or config.color

@@ -26,8 +26,26 @@ _ENCODE_MAP = [
 def encode_text_for_url(text: str) -> str:
     """Encode text for use in memegen API URLs.
 
-    Transforms special characters according to the memegen URL encoding scheme.
-    Spaces become underscores, and other special characters use tilde-escapes.
+    Transforms special characters according to the memegen URL encoding
+    scheme. Spaces become underscores, and other special characters use
+    tilde-escapes.
+
+    Parameters
+    ----------
+    text : str
+        The plain text to encode.
+
+    Returns
+    -------
+    str
+        URL-encoded text suitable for memegen API URLs.
+
+    Examples
+    --------
+    >>> encode_text_for_url("hello world")
+    'hello_world'
+    >>> encode_text_for_url("one_two")
+    'one__two'
     """
     result = text
     for char, replacement in _ENCODE_MAP:
@@ -52,7 +70,27 @@ _TILDE_DECODE_MAP = [
 
 
 def decode_text_from_url(text: str) -> str:
-    """Decode text from memegen API URL format back to plain text."""
+    """Decode text from memegen API URL format back to plain text.
+
+    Reverses the encoding applied by :func:`encode_text_for_url`.
+
+    Parameters
+    ----------
+    text : str
+        The URL-encoded text to decode.
+
+    Returns
+    -------
+    str
+        Plain text with special characters restored.
+
+    Examples
+    --------
+    >>> decode_text_from_url("hello_world")
+    'hello world'
+    >>> decode_text_from_url("one__two")
+    'one_two'
+    """
     result = text
 
     # First pass: protect doubled sequences with sentinels
@@ -80,6 +118,18 @@ def wrap_text(text: str, max_chars_per_line: int = 30) -> str:
 
     Tries to balance line lengths for a visually appealing result.
     Returns text with newlines inserted at wrap points.
+
+    Parameters
+    ----------
+    text : str
+        The text to wrap.
+    max_chars_per_line : int, optional
+        Maximum characters per line (default: 30).
+
+    Returns
+    -------
+    str
+        Wrapped text with ``\\n`` at break points.
     """
     if len(text) <= max_chars_per_line:
         return text
@@ -91,12 +141,26 @@ def wrap_text(text: str, max_chars_per_line: int = 30) -> str:
 def apply_style(text: str, style: str) -> str:
     """Apply text style transformation.
 
-    Args:
-        text: The raw text.
-        style: One of "upper", "lower", or "none".
+    Parameters
+    ----------
+    text : str
+        The raw text.
+    style : str
+        One of ``"upper"``, ``"lower"``, or ``"none"``.
 
-    Returns:
+    Returns
+    -------
+    str
         Transformed text.
+
+    Examples
+    --------
+    >>> apply_style("hello", "upper")
+    'HELLO'
+    >>> apply_style("HELLO", "lower")
+    'hello'
+    >>> apply_style("Hello", "none")
+    'Hello'
     """
     if style == "upper":
         return text.upper()

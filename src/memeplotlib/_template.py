@@ -23,8 +23,26 @@ class TemplateNotFoundError(Exception):
 class TextPosition:
     """Defines where and how a text line is rendered on a template.
 
-    All coordinates are fractional (0.0 to 1.0) relative to the image dimensions.
-    (0, 0) is the top-left corner.
+    All coordinates are fractional (0.0 to 1.0) relative to the image
+    dimensions. ``(0, 0)`` is the top-left corner.
+
+    Attributes
+    ----------
+    anchor_x : float
+        Left edge of the text box (0.0 to 1.0).
+    anchor_y : float
+        Top edge of the text box (0.0 to 1.0).
+    scale_x : float
+        Width of the text box as a fraction of image width.
+    scale_y : float
+        Height of the text box as a fraction of image height.
+    align : str
+        Horizontal text alignment (``"center"``, ``"left"``, ``"right"``).
+    style : str
+        Default text style for this position (``"upper"``, ``"lower"``,
+        ``"none"``).
+    angle : float
+        Text rotation angle in degrees.
     """
 
     anchor_x: float = 0.0
@@ -45,7 +63,23 @@ DEFAULT_TEXT_POSITIONS = [
 
 @dataclass
 class Template:
-    """A meme template with a background image and text position metadata."""
+    """A meme template with a background image and text position metadata.
+
+    Attributes
+    ----------
+    id : str
+        Template identifier (e.g., ``"buzz"``, ``"drake"``).
+    name : str
+        Human-readable display name.
+    image_url : str
+        URL or local file path to the background image.
+    text_positions : list of TextPosition
+        Regions where text lines are rendered.
+    keywords : list of str
+        Search keywords associated with the template.
+    example : list of str
+        Example text lines for the template.
+    """
 
     id: str
     name: str
@@ -63,15 +97,28 @@ class Template:
     ) -> Template:
         """Fetch template metadata and blank image from the memegen API.
 
-        Args:
-            template_id: The memegen template ID (e.g., "buzz", "drake").
-            api_base: Override the API base URL.
+        Parameters
+        ----------
+        template_id : str
+            The memegen template ID (e.g., ``"buzz"``, ``"drake"``).
+        api_base : str or None, optional
+            Override the API base URL.
 
-        Returns:
-            A Template instance with metadata populated.
+        Returns
+        -------
+        Template
+            A Template instance with metadata populated from the API.
 
-        Raises:
-            TemplateNotFoundError: If the template ID doesn't exist.
+        Raises
+        ------
+        TemplateNotFoundError
+            If the template ID doesn't exist in the memegen API.
+
+        Examples
+        --------
+        >>> t = Template.from_memegen("buzz")  # doctest: +SKIP
+        >>> t.name  # doctest: +SKIP
+        'Buzz Lightyear'
         """
         base = api_base or config.api_base
         url = f"{base}/templates/{template_id}"
@@ -129,13 +176,25 @@ class Template:
     ) -> Template:
         """Create a template from a local image file or URL.
 
-        Args:
-            path_or_url: Path to a local image file, or an HTTP(S) URL.
-            lines: Number of text lines (determines text positions).
-            name: Optional display name for the template.
+        Parameters
+        ----------
+        path_or_url : str
+            Path to a local image file, or an HTTP(S) URL.
+        lines : int, optional
+            Number of text lines, which determines the number of text
+            positions (default: 2).
+        name : str, optional
+            Display name for the template. Defaults to the file stem.
 
-        Returns:
-            A Template instance.
+        Returns
+        -------
+        Template
+            A Template instance backed by the given image.
+
+        Examples
+        --------
+        >>> t = Template.from_image("photo.jpg")  # doctest: +SKIP
+        >>> t = Template.from_image("https://example.com/img.png", lines=3)  # doctest: +SKIP
         """
         if path_or_url.startswith(("http://", "https://")):
             image_url = path_or_url
@@ -167,9 +226,19 @@ class Template:
         )
 
     def get_image(self, cache: TemplateCache | None = None) -> np.ndarray:
-        """Return the template background image as a numpy RGBA array.
+        """Return the template background image as a NumPy RGBA array.
 
         Downloads from the image URL if not already loaded or cached.
+
+        Parameters
+        ----------
+        cache : TemplateCache or None, optional
+            Cache instance for storing/retrieving downloaded images.
+
+        Returns
+        -------
+        numpy.ndarray
+            RGBA image array with shape ``(height, width, 4)``.
         """
         if self._image_array is not None:
             return self._image_array
@@ -199,7 +268,22 @@ class Template:
 
 
 class TemplateRegistry:
-    """Registry that discovers and caches templates from the memegen API."""
+    """Registry that discovers and caches templates from the memegen API.
+
+    Parameters
+    ----------
+    api_base : str or None, optional
+        Base URL for the memegen API. Uses :attr:`config.api_base
+        <MemeplotlibConfig.api_base>` if ``None``.
+    cache : TemplateCache or None, optional
+        Cache instance for storing template metadata.
+
+    Examples
+    --------
+    >>> reg = TemplateRegistry()  # doctest: +SKIP
+    >>> results = reg.search("dog")  # doctest: +SKIP
+    >>> all_templates = reg.list_all()  # doctest: +SKIP
+    """
 
     def __init__(
         self,
@@ -233,7 +317,23 @@ class TemplateRegistry:
         return self._catalog
 
     def get(self, template_id: str) -> Template:
-        """Get a template by ID, fetching from API if needed."""
+        """Get a template by ID, fetching from the API if needed.
+
+        Parameters
+        ----------
+        template_id : str
+            The memegen template ID.
+
+        Returns
+        -------
+        Template
+            The resolved template.
+
+        Raises
+        ------
+        TemplateNotFoundError
+            If the template ID is not found.
+        """
         catalog = self._fetch_catalog()
 
         for item in catalog:
@@ -244,7 +344,19 @@ class TemplateRegistry:
         return Template.from_memegen(template_id, api_base=self._api_base)
 
     def search(self, query: str) -> list[dict[str, Any]]:
-        """Search templates by keyword, name, or ID."""
+        """Search templates by keyword, name, or ID.
+
+        Parameters
+        ----------
+        query : str
+            Search term to match against template IDs, names, and
+            keywords (case-insensitive).
+
+        Returns
+        -------
+        list of dict
+            Matching template metadata dicts.
+        """
         catalog = self._fetch_catalog()
         query_lower = query.lower()
         results = []
@@ -259,11 +371,17 @@ class TemplateRegistry:
         return results
 
     def list_all(self) -> list[dict[str, Any]]:
-        """List all available templates."""
+        """List all available templates.
+
+        Returns
+        -------
+        list of dict
+            Full template catalog from the memegen API.
+        """
         return self._fetch_catalog()
 
     def refresh(self) -> None:
-        """Force re-fetch of the template catalog."""
+        """Force re-fetch of the template catalog from the API."""
         self._catalog = None
         resp = requests.get(f"{self._api_base}/templates/", timeout=10)
         resp.raise_for_status()
@@ -279,9 +397,23 @@ def _resolve_template(
     """Resolve a template string to a Template object.
 
     Resolution order:
-    1. Local file path (contains / or \\ or ends with image extension)
-    2. URL (starts with http:// or https://)
+
+    1. Local file path (contains ``/`` or ``\\`` or ends with an image
+       extension)
+    2. URL (starts with ``http://`` or ``https://``)
     3. memegen template ID
+
+    Parameters
+    ----------
+    template : str
+        Template identifier -- file path, URL, or memegen ID.
+    registry : TemplateRegistry or None, optional
+        Registry to use for memegen ID lookups.
+
+    Returns
+    -------
+    Template
+        The resolved template.
     """
     # Check if it's a file path
     p = Path(template)

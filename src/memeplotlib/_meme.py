@@ -20,18 +20,36 @@ if TYPE_CHECKING:
 class Meme:
     """A meme builder with a fluent (chainable) API.
 
-    Example::
+    Parameters
+    ----------
+    template : str or Template
+        Template identifier (memegen ID, file path, URL) or a
+        :class:`Template` instance.
+    *lines : str
+        Initial text lines.
+    font : str or None, optional
+        Font family name.
+    color : str or None, optional
+        Text fill color.
+    outline_color : str or None, optional
+        Text outline color.
+    outline_width : float or None, optional
+        Outline stroke width.
+    fontsize : float or None, optional
+        Font size in points.
+    style : str or None, optional
+        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
 
-        from memeplotlib import Meme
+    Examples
+    --------
+    >>> from memeplotlib import Meme
+    >>> Meme("buzz").top("memes").bottom("memes everywhere").show()  # doctest: +SKIP
 
-        Meme("buzz").top("memes").bottom("memes everywhere").show()
-
-        # Or step by step
-        m = Meme("drake")
-        m.top("writing tests")
-        m.bottom("shipping to prod")
-        fig, ax = m.render()
-        m.save("output.png")
+    >>> m = Meme("drake")  # doctest: +SKIP
+    >>> m.top("writing tests")  # doctest: +SKIP
+    >>> m.bottom("shipping to prod")  # doctest: +SKIP
+    >>> fig, ax = m.render()  # doctest: +SKIP
+    >>> m.save("output.png")  # doctest: +SKIP
     """
 
     def __init__(
@@ -68,7 +86,18 @@ class Meme:
         return self._template
 
     def top(self, text: str) -> Meme:
-        """Set the top text line (index 0)."""
+        """Set the top text line (index 0).
+
+        Parameters
+        ----------
+        text : str
+            The text to place at the top of the meme.
+
+        Returns
+        -------
+        Meme
+            Self, for method chaining.
+        """
         if len(self._lines) == 0:
             self._lines.append(text)
         else:
@@ -76,14 +105,38 @@ class Meme:
         return self
 
     def bottom(self, text: str) -> Meme:
-        """Set the bottom text line (index 1)."""
+        """Set the bottom text line (index 1).
+
+        Parameters
+        ----------
+        text : str
+            The text to place at the bottom of the meme.
+
+        Returns
+        -------
+        Meme
+            Self, for method chaining.
+        """
         while len(self._lines) < 2:
             self._lines.append("")
         self._lines[1] = text
         return self
 
     def text(self, index: int, text: str) -> Meme:
-        """Set text at a specific line index."""
+        """Set text at a specific line index.
+
+        Parameters
+        ----------
+        index : int
+            Zero-based line index.
+        text : str
+            The text to place at the given position.
+
+        Returns
+        -------
+        Meme
+            Self, for method chaining.
+        """
         while len(self._lines) <= index:
             self._lines.append("")
         self._lines[index] = text
@@ -95,7 +148,22 @@ class Meme:
         figsize: tuple[float, float] | None = None,
         dpi: int | None = None,
     ) -> tuple[Figure, Axes]:
-        """Render the meme and return (Figure, Axes)."""
+        """Render the meme and return the Figure and Axes.
+
+        Parameters
+        ----------
+        ax : Axes or None, optional
+            Existing axes to render onto.
+        figsize : tuple of (float, float) or None, optional
+            Figure size in inches ``(width, height)``.
+        dpi : int or None, optional
+            Dots per inch.
+
+        Returns
+        -------
+        tuple of (Figure, Axes)
+            The rendered matplotlib Figure and Axes.
+        """
         template = self._get_template()
         fig, ax_out = render_meme(
             template,
@@ -116,13 +184,28 @@ class Meme:
         return fig, ax_out
 
     def show(self) -> None:
-        """Render and display the meme."""
+        """Render and display the meme.
+
+        Calls :meth:`render` if the meme has not been rendered yet,
+        then displays the figure with ``matplotlib.pyplot.show()``.
+        """
         if self._fig is None:
             self.render()
         plt.show()
 
     def save(self, path: str | Path, dpi: int | None = None, **kwargs) -> None:
-        """Render and save the meme to a file."""
+        """Render and save the meme to a file.
+
+        Parameters
+        ----------
+        path : str or Path
+            Output file path (e.g., ``"meme.png"``).
+        dpi : int or None, optional
+            Dots per inch for the saved image.
+        **kwargs
+            Additional keyword arguments passed to
+            :meth:`matplotlib.figure.Figure.savefig`.
+        """
         if self._fig is None:
             self.render(dpi=dpi)
         self._fig.savefig(
