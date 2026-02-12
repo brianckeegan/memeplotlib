@@ -90,7 +90,7 @@ all_templates = reg.list_all()
 ## Documentation
 
 Full documentation including a tutorial, user guide, and API reference is
-available at [memeplotlib.readthedocs.io](https://memeplotlib.readthedocs.io).
+available at [brianckeegan.github.io/memeplotlib](https://brianckeegan.github.io/memeplotlib/).
 
 To build the docs locally:
 
