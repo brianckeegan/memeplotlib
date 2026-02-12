@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: # Fill in after publishing to PyPI: `sha256sum memeplotlib-0.1.0.tar.gz`
+  sha256: "273550e4c6222a3b7532de6e82f7421c61d650c70af4334f4abe9a0ee294531d"
 
 build:
   noarch: python
