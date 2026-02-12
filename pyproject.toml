@@ -49,7 +49,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/brianckeegan/memeplotlib"
-Documentation = "https://memeplotlib.readthedocs.io"
+Documentation = "https://brianckeegan.github.io/memeplotlib/"
 Repository = "https://github.com/brianckeegan/memeplotlib"
 Issues = "https://github.com/brianckeegan/memeplotlib/issues"
 
