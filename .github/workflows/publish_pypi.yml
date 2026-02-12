@@ -71,7 +71,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [build, publish-testpypi]
+    needs: build
     runs-on: ubuntu-latest
     if: >
       (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi') ||
