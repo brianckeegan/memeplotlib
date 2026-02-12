@@ -1,2 +1,109 @@
 # memeplotlib
-Memes with Python's matplotlib
+
+Memes with Python's matplotlib. Create image macro memes using matplotlib for rendering and the [memegen](https://github.com/jacebrowning/memegen) API for template discovery.
+
+## Installation
+
+```bash
+pip install memeplotlib
+```
+
+## Quick Start
+
+```python
+import memeplotlib as memes
+
+# One-liner meme from a memegen template
+memes.meme("buzz", "memes", "memes everywhere")
+
+# Save to file
+memes.meme("doge", "such code", "very bug", savefig="meme.png", show=False)
+```
+
+## Features
+
+### Functional API
+
+```python
+import memeplotlib as memes
+
+# Customize text styling
+memes.meme("drake", "writing tests", "shipping to prod",
+           font="impact", color="yellow")
+
+# Get figure/axes back for further customization
+fig, ax = memes.meme("distracted", "my project", "new framework", "me",
+                      show=False)
+
+# Use a local image as template
+memes.meme("/path/to/image.jpg", "top text", "bottom text")
+```
+
+### Object-Oriented API
+
+```python
+from memeplotlib import Meme
+
+# Step by step
+m = Meme("buzz")
+m.top("memes")
+m.bottom("memes everywhere")
+m.save("output.png")
+
+# Or chained
+Meme("doge").top("such code").bottom("very bug").show()
+```
+
+### Memify Existing Plots
+
+Turn any matplotlib figure into a meme:
+
+```python
+import matplotlib.pyplot as plt
+import memeplotlib as memes
+
+fig, ax = plt.subplots()
+ax.plot([1, 2, 3], [1, 4, 9])
+memes.memify(fig, "stonks")
+```
+
+### Global Configuration
+
+```python
+import memeplotlib as memes
+
+memes.config.font = "comic"
+memes.config.color = "yellow"
+memes.config.style = "none"  # don't auto-uppercase
+```
+
+### Template Discovery
+
+```python
+from memeplotlib import TemplateRegistry
+
+reg = TemplateRegistry()
+results = reg.search("dog")
+all_templates = reg.list_all()
+```
+
+## How It Works
+
+1. Templates are fetched from the [memegen API](https://api.memegen.link) (blank background images + metadata)
+2. Images are cached locally for offline reuse
+3. Text is rendered using matplotlib's text system with `patheffects.Stroke` for the classic outlined meme look
+4. An Impact-like font (Anton) is bundled as a fallback for systems where Impact isn't installed
+
+## Dependencies
+
+- `matplotlib >= 3.0.0`
+- `requests`
+- `numpy`
+- `Pillow`
+- `platformdirs`
+
+Requires Python 3.10+.
+
+## License
+
+MIT
