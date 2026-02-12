@@ -87,6 +87,20 @@ results = reg.search("dog")
 all_templates = reg.list_all()
 ```
 
+## Documentation
+
+Full documentation including a tutorial, user guide, and API reference is
+available at [memeplotlib.readthedocs.io](https://memeplotlib.readthedocs.io).
+
+To build the docs locally:
+
+```bash
+pip install -e ".[docs]"
+cd docs
+make html
+open _build/html/index.html
+```
+
 ## How It Works
 
 1. Templates are fetched from the [memegen API](https://api.memegen.link) (blank background images + metadata)

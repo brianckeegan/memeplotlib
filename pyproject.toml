@@ -35,6 +35,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+docs = [
+    "sphinx>=7.0",
+    "sphinx-autodoc-typehints>=1.23",
+]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -45,6 +49,7 @@ dev = [
 
 [project.urls]
 Homepage = "https://github.com/brianckeegan/memeplotlib"
+Documentation = "https://memeplotlib.readthedocs.io"
 Repository = "https://github.com/brianckeegan/memeplotlib"
 Issues = "https://github.com/brianckeegan/memeplotlib/issues"
 

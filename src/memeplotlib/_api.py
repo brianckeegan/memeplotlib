@@ -38,38 +38,53 @@ def meme(
     """Create a meme from a template with text lines.
 
     This is the main entry point for creating memes. The template can be:
-    - A memegen template ID (e.g., "buzz", "drake", "doge")
+
+    - A memegen template ID (e.g., ``"buzz"``, ``"drake"``, ``"doge"``)
     - A local file path to an image
     - An HTTP(S) URL to an image
 
-    Args:
-        template: Template identifier — memegen ID, file path, or URL.
-        *lines: Text lines for each text position (top, bottom, etc.).
-        font: Font family name (default: "impact").
-        color: Text fill color (default: "white").
-        outline_color: Text outline color (default: "black").
-        outline_width: Outline stroke width (default: 2.0).
-        fontsize: Font size in points. Auto-calculated if None.
-        style: Text transform — "upper", "lower", or "none" (default: "upper").
-        show: Whether to call plt.show() (default: True).
-        savefig: Path to save the meme image to.
-        figsize: Figure size as (width, height) in inches.
-        dpi: Dots per inch (default: 150).
-        ax: Existing matplotlib Axes to render onto.
+    Parameters
+    ----------
+    template : str
+        Template identifier -- memegen ID, file path, or URL.
+    *lines : str
+        Text lines for each text position (top, bottom, etc.).
+    font : str or None, optional
+        Font family name (default: ``"impact"``).
+    color : str or None, optional
+        Text fill color (default: ``"white"``).
+    outline_color : str or None, optional
+        Text outline color (default: ``"black"``).
+    outline_width : float or None, optional
+        Outline stroke width (default: 2.0).
+    fontsize : float or None, optional
+        Font size in points. Auto-calculated if ``None``.
+    style : str or None, optional
+        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``
+        (default: ``"upper"``).
+    show : bool, optional
+        Whether to call ``plt.show()`` (default: ``True``).
+    savefig : str, Path, or None, optional
+        Path to save the meme image to.
+    figsize : tuple of (float, float) or None, optional
+        Figure size as ``(width, height)`` in inches.
+    dpi : int or None, optional
+        Dots per inch (default: 150).
+    ax : Axes or None, optional
+        Existing matplotlib Axes to render onto.
 
-    Returns:
-        Tuple of (Figure, Axes) for further customization.
+    Returns
+    -------
+    tuple of (Figure, Axes)
+        The matplotlib Figure and Axes for further customization.
 
-    Example::
+    Examples
+    --------
+    >>> import memeplotlib as memes
+    >>> memes.meme("buzz", "memes", "memes everywhere")  # doctest: +SKIP
 
-        import memeplotlib as memes
-
-        # Quick one-liner
-        memes.meme("buzz", "memes", "memes everywhere")
-
-        # With customization
-        memes.meme("drake", "writing tests", "shipping to prod",
-                    font="impact", color="yellow", show=False)
+    >>> memes.meme("drake", "writing tests", "shipping to prod",
+    ...            font="impact", color="yellow", show=False)  # doctest: +SKIP
     """
     tmpl = _resolve_template(template)
 
@@ -117,33 +132,47 @@ def memify(
 ) -> Figure:
     """Add meme-style text to an existing matplotlib figure.
 
-    Overlays bold, outlined text on top of any matplotlib figure — useful
+    Overlays bold, outlined text on top of any matplotlib figure -- useful
     for turning plots, charts, or other visualizations into memes.
 
-    Args:
-        fig: The matplotlib figure to add text to.
-        *lines: Text lines to overlay.
-        position: Layout — "top-bottom", "top", "bottom", or "center".
-        font: Font family name.
-        color: Text fill color.
-        outline_color: Text outline color.
-        outline_width: Outline stroke width.
-        fontsize: Font size in points (auto if None).
-        style: Text transform — "upper", "lower", or "none".
-        show: Whether to call plt.show().
-        savefig: Path to save the result to.
+    Parameters
+    ----------
+    fig : Figure
+        The matplotlib figure to add text to.
+    *lines : str
+        Text lines to overlay.
+    position : str, optional
+        Layout -- ``"top-bottom"`` (default), ``"top"``, ``"bottom"``,
+        or ``"center"``.
+    font : str or None, optional
+        Font family name.
+    color : str or None, optional
+        Text fill color.
+    outline_color : str or None, optional
+        Text outline color.
+    outline_width : float or None, optional
+        Outline stroke width.
+    fontsize : float or None, optional
+        Font size in points (auto if ``None``).
+    style : str or None, optional
+        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
+    show : bool, optional
+        Whether to call ``plt.show()``.
+    savefig : str, Path, or None, optional
+        Path to save the result to.
 
-    Returns:
+    Returns
+    -------
+    Figure
         The modified Figure.
 
-    Example::
-
-        import matplotlib.pyplot as plt
-        import memeplotlib as memes
-
-        fig, ax = plt.subplots()
-        ax.plot([1, 2, 3], [1, 4, 9])
-        memes.memify(fig, "stonks")
+    Examples
+    --------
+    >>> import matplotlib.pyplot as plt
+    >>> import memeplotlib as memes
+    >>> fig, ax = plt.subplots()  # doctest: +SKIP
+    >>> ax.plot([1, 2, 3], [1, 4, 9])  # doctest: +SKIP
+    >>> memes.memify(fig, "stonks")  # doctest: +SKIP
     """
     result = render_memify(
         fig,

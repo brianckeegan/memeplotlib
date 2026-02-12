@@ -21,11 +21,32 @@ class MemeplotlibConfig:
     Modify this object to change defaults for all meme creation calls.
     Individual function calls can still override via keyword arguments.
 
-    Example::
+    Attributes
+    ----------
+    api_base : str
+        Base URL for the memegen API.
+    font : str
+        Default font family name.
+    color : str
+        Default text fill color.
+    outline_color : str
+        Default text outline color.
+    outline_width : float
+        Default outline stroke width.
+    dpi : int
+        Default dots per inch for rendering.
+    style : str
+        Default text transform (``"upper"``, ``"lower"``, or ``"none"``).
+    cache_enabled : bool
+        Whether disk caching is enabled.
+    cache_dir : str or None
+        Custom cache directory path, or ``None`` for the platform default.
 
-        import memeplotlib as memes
-        memes.config.font = "comic"
-        memes.config.color = "yellow"
+    Examples
+    --------
+    >>> import memeplotlib as memes
+    >>> memes.config.font = "comic"  # doctest: +SKIP
+    >>> memes.config.color = "yellow"  # doctest: +SKIP
     """
 
     api_base: str = DEFAULT_API_BASE
