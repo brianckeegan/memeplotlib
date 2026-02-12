@@ -44,31 +44,6 @@ jobs:
           name: dist
           path: dist/
 
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: build
-    runs-on: ubuntu-latest
-    if: >
-      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'testpypi') ||
-      (github.event_name == 'release' && github.event.action == 'published')
-    environment:
-      name: testpypi
-      url: https://test.pypi.org/project/memeplotlib/
-    permissions:
-      id-token: write  # Required for OIDC Trusted Publisher
-
-    steps:
-      - name: Download distribution artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-
-      - name: Publish to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-
   publish-pypi:
     name: Publish to PyPI
     needs: build
