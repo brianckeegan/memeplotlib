@@ -1,0 +1,54 @@
+{% set name = "memeplotlib" %}
+{% set version = "0.1.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: # Fill in after publishing to PyPI: `sha256sum memeplotlib-0.1.0.tar.gz`
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+
+requirements:
+  host:
+    - python >=3.10
+    - pip
+    - hatchling
+  run:
+    - python >=3.10
+    - matplotlib-base >=3.0.0
+    - requests >=2.20.0
+    - numpy >=1.16.0
+    - platformdirs >=2.0.0
+    - pillow >=8.0.0
+
+test:
+  imports:
+    - memeplotlib
+  commands:
+    - pip check
+  requires:
+    - pip
+
+about:
+  home: https://github.com/brianckeegan/memeplotlib
+  summary: Memes with Python's matplotlib
+  description: |
+    memeplotlib is a Python library for creating image macro memes using
+    matplotlib for rendering and the memegen API for template discovery.
+    It supports functional and object-oriented APIs, custom fonts, and
+    can memify existing matplotlib figures.
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  doc_url: https://brianckeegan.github.io/memeplotlib/
+  dev_url: https://github.com/brianckeegan/memeplotlib
+
+extra:
+  recipe-maintainers:
+    - brianckeegan
