@@ -71,7 +71,7 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    needs: [build, publish-testpypi]
+    needs: build
     runs-on: ubuntu-latest
     if: >
       (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'pypi') ||
@@ -91,3 +91,43 @@ jobs:
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-conda:
+    name: Publish to conda-forge
+    needs: publish-pypi
+    runs-on: ubuntu-latest
+    if: github.event_name == 'release' && github.event.action == 'published'
+    environment:
+      name: conda-forge
+      url: https://anaconda.org/conda-forge/memeplotlib
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: "3.10"
+          channels: conda-forge,defaults
+          channel-priority: strict
+
+      - name: Install build tools
+        run: conda install -y grayskull conda-build anaconda-client
+        shell: bash -el {0}
+
+      - name: Generate conda recipe from PyPI
+        run: |
+          VERSION="${{ github.event.release.tag_name }}"
+          VERSION="${VERSION#v}"
+          grayskull pypi "memeplotlib==${VERSION}"
+        shell: bash -el {0}
+
+      - name: Build conda package
+        run: conda build memeplotlib/
+        shell: bash -el {0}
+
+      - name: Upload to Anaconda
+        run: |
+          PACKAGE=$(conda build memeplotlib/ --output)
+          anaconda -t ${{ secrets.ANACONDA_API_TOKEN }} upload "$PACKAGE"
+        shell: bash -el {0}
