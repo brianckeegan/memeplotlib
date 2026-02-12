@@ -24,6 +24,15 @@ class TemplateCache:
 
     Caches template catalog metadata and downloaded template images so that
     the memegen API is only hit once per template.
+
+    Parameters
+    ----------
+    cache_dir : Path or None, optional
+        Directory for on-disk cache files. Uses the platform default
+        (via :mod:`platformdirs`) if ``None``.
+    max_memory : int, optional
+        Maximum number of images to keep in the in-memory LRU cache
+        (default: 50).
     """
 
     def __init__(
@@ -45,11 +54,16 @@ class TemplateCache:
     def get_catalog(self, ttl: int = 86400) -> list[dict[str, Any]] | None:
         """Get cached template catalog if it exists and hasn't expired.
 
-        Args:
-            ttl: Time-to-live in seconds (default 24 hours).
+        Parameters
+        ----------
+        ttl : int, optional
+            Time-to-live in seconds (default: 86400, i.e. 24 hours).
 
-        Returns:
-            List of template dicts, or None if cache miss/expired.
+        Returns
+        -------
+        list of dict or None
+            List of template metadata dicts, or ``None`` on cache miss
+            or expiry.
         """
         catalog_path = self._cache_dir / "catalog.json"
         if not catalog_path.exists():
@@ -64,7 +78,13 @@ class TemplateCache:
             return None
 
     def set_catalog(self, templates: list[dict[str, Any]]) -> None:
-        """Cache template catalog to disk with current timestamp."""
+        """Cache template catalog to disk with current timestamp.
+
+        Parameters
+        ----------
+        templates : list of dict
+            Template metadata dicts to cache.
+        """
         self._ensure_dirs()
         data = {"timestamp": time.time(), "templates": templates}
         (self._cache_dir / "catalog.json").write_text(json.dumps(data))
@@ -75,9 +95,20 @@ class TemplateCache:
         return hashlib.sha256(url.encode()).hexdigest()[:16]
 
     def get_image(self, url: str) -> np.ndarray | None:
-        """Get cached template image as numpy array.
+        """Get cached template image as a NumPy array.
 
-        Checks in-memory cache first, then disk cache.
+        Checks the in-memory LRU cache first, then falls back to the
+        on-disk file cache.
+
+        Parameters
+        ----------
+        url : str
+            The image URL used as the cache key.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            RGBA image array, or ``None`` on cache miss.
         """
         key = self._image_key(url)
 
@@ -99,7 +130,15 @@ class TemplateCache:
         return None
 
     def set_image(self, url: str, image_bytes: bytes) -> None:
-        """Cache template image to disk and memory."""
+        """Cache template image to disk and memory.
+
+        Parameters
+        ----------
+        url : str
+            The image URL used as the cache key.
+        image_bytes : bytes
+            Raw image file bytes to store.
+        """
         self._ensure_dirs()
         key = self._image_key(url)
 
