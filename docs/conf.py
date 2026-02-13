@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = "memeplotlib"
 copyright = "2025, Brian Keegan"
 author = "Brian Keegan"
+html_title = "memeplotlib"
 
 
 def _get_release() -> str:
