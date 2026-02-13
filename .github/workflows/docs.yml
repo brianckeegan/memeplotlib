@@ -1,6 +1,8 @@
 name: Deploy Docs to GitHub Pages
 
 on:
+  push:
+    branches: [main]
   release:
     types: [published]
   workflow_dispatch:
@@ -23,6 +25,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v5
