@@ -21,6 +21,10 @@ It returns a ``(Figure, Axes)`` tuple so you can continue to modify the plot:
                          show=False)
    fig.savefig("distracted.png", dpi=200)
 
+.. image:: _static/examples/ug_functional_distracted.png
+   :alt: Distracted boyfriend "my project / new framework / me"
+   :width: 400px
+
 All text styling parameters are available as keyword arguments:
 
 .. code-block:: python
@@ -28,6 +32,10 @@ All text styling parameters are available as keyword arguments:
    memes.meme("drake", "writing tests", "shipping to prod",
               font="impact", color="yellow", outline_color="blue",
               outline_width=3.0, style="none", show=False)
+
+.. image:: _static/examples/ug_functional_drake_styled.png
+   :alt: Drake with custom text styling
+   :width: 400px
 
 Object-Oriented API
 --------------------
@@ -40,6 +48,10 @@ The :class:`~memeplotlib.Meme` class provides a fluent, chainable interface:
 
    Meme("doge").top("such code").bottom("very bug").show()
 
+.. image:: _static/examples/ug_oo_doge.png
+   :alt: Doge "such code / very bug" via method chaining
+   :width: 400px
+
 You can also build a meme step-by-step:
 
 .. code-block:: python
@@ -49,6 +61,10 @@ You can also build a meme step-by-step:
    m.bottom("memes everywhere")
    fig, ax = m.render()
    m.save("output.png")
+
+.. image:: _static/examples/ug_oo_buzz.png
+   :alt: Buzz Lightyear "memes / memes everywhere" step-by-step
+   :width: 400px
 
 The :meth:`~memeplotlib.Meme.text` method sets text at an arbitrary index,
 which is useful for templates with more than two text positions:
@@ -62,12 +78,20 @@ which is useful for templates with more than two text positions:
    m.text(3, "reading the source")
    m.show()
 
+.. image:: _static/examples/ug_oo_expanding_brain.png
+   :alt: Expanding brain with four text positions
+   :width: 400px
+
 You can also pass initial text lines directly to the constructor:
 
 .. code-block:: python
 
    m = Meme("buzz", "memes", "memes everywhere")
    m.show()
+
+.. image:: _static/examples/ug_oo_buzz_constructor.png
+   :alt: Buzz Lightyear via constructor shorthand
+   :width: 400px
 
 Memifying Existing Figures
 ---------------------------
@@ -85,6 +109,10 @@ existing matplotlib figure:
    ax.set_title("Quadratic growth")
    memes.memify(fig, "stonks")
 
+.. image:: _static/examples/ug_memify_basic.png
+   :alt: Line plot with "STONKS" text overlay
+   :width: 400px
+
 The ``position`` parameter controls text layout:
 
 - ``"top-bottom"`` (default) -- text at the top and bottom.
@@ -97,6 +125,10 @@ The ``position`` parameter controls text layout:
    fig, ax = plt.subplots()
    ax.bar(["A", "B", "C"], [3, 7, 5])
    memes.memify(fig, "not stonks", position="bottom")
+
+.. image:: _static/examples/ug_memify_bottom.png
+   :alt: Bar chart with "NOT STONKS" at the bottom
+   :width: 400px
 
 Global Configuration
 ---------------------
@@ -114,6 +146,10 @@ to every meme creation call unless overridden by keyword arguments:
    memes.config.outline_color = "blue"
    memes.config.outline_width = 3.0
    memes.config.style = "none"
+
+.. image:: _static/examples/ug_config.png
+   :alt: Meme rendered with global configuration overrides
+   :width: 400px
 
 All configurable attributes:
 
@@ -240,3 +276,7 @@ axes, which is useful for creating subplot layouts:
 
    plt.tight_layout()
    plt.show()
+
+.. image:: _static/examples/ug_subplots.png
+   :alt: Side-by-side memes using subplots
+   :width: 600px

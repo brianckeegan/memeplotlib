@@ -8,7 +8,19 @@ Top-level Functions
 
 .. autofunction:: meme
 
+**Example output:**
+
+.. image:: _static/examples/api_meme_example.png
+   :alt: meme() example output
+   :width: 400px
+
 .. autofunction:: memify
+
+**Example output:**
+
+.. image:: _static/examples/api_memify_example.png
+   :alt: memify() example output
+   :width: 400px
 
 Meme Class
 -----------
@@ -17,6 +29,12 @@ Meme Class
    :members:
    :undoc-members:
    :show-inheritance:
+
+**Example output:**
+
+.. image:: _static/examples/api_meme_class_example.png
+   :alt: Meme class method chain example
+   :width: 400px
 
 Configuration
 --------------

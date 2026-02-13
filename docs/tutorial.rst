@@ -31,6 +31,10 @@ function:
 
    memes.meme("buzz", "memes", "memes everywhere")
 
+.. image:: _static/examples/tutorial_first_meme.png
+   :alt: Buzz Lightyear "memes / memes everywhere"
+   :width: 400px
+
 This fetches the "Buzz Lightyear" template from the `memegen API
 <https://api.memegen.link>`_, renders "MEMES" at the top and
 "MEMES EVERYWHERE" at the bottom, and displays the result with
@@ -51,6 +55,10 @@ want an interactive window:
    memes.meme("doge", "such code", "very bug",
               savefig="meme.png", show=False)
 
+.. image:: _static/examples/tutorial_save_to_file.png
+   :alt: Doge "such code / very bug"
+   :width: 400px
+
 The output file format is determined by the file extension (PNG, JPEG, PDF,
 SVG, etc.), following matplotlib's conventions.
 
@@ -63,6 +71,10 @@ Control font, color, and style:
 
    memes.meme("drake", "writing tests", "shipping to prod",
               font="impact", color="yellow", style="upper")
+
+.. image:: _static/examples/tutorial_custom_text.png
+   :alt: Drake "writing tests / shipping to prod" with yellow text
+   :width: 400px
 
 Available ``style`` values:
 
@@ -85,6 +97,10 @@ both:
    memes.meme("buzz", "white on black", "the classic",
               color="white", outline_color="black", outline_width=3.0,
               show=False)
+
+.. image:: _static/examples/tutorial_outline.png
+   :alt: Buzz Lightyear with custom outline settings
+   :width: 400px
 
 Using Local Images
 -------------------
@@ -112,9 +128,14 @@ continue to modify the plot before saving or showing:
    fig, ax = memes.meme("buzz", "memes", "memes everywhere", show=False)
    fig.savefig("custom_meme.png", dpi=300)
 
+.. image:: _static/examples/tutorial_figure_back.png
+   :alt: Buzz Lightyear returned as a Figure object
+   :width: 400px
+
 Next Steps
 ----------
 
 - See the :doc:`user_guide` for the object-oriented API, memify workflow,
   global configuration, and template discovery.
 - See the :doc:`api` for the complete API reference.
+- Browse the :doc:`auto_examples/index` for runnable examples with output.
