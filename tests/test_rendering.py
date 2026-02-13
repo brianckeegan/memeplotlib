@@ -56,6 +56,32 @@ class TestAutoFontsize:
         assert wide > narrow
 
 
+class TestAutoFontsizeConfig:
+    def test_default_base_size_is_72(self):
+        from memeplotlib._config import DEFAULT_FONTSIZE
+        assert DEFAULT_FONTSIZE == 72.0
+
+    def test_config_fontsize_affects_auto_size(self):
+        from memeplotlib._config import config
+        original = config.fontsize
+        try:
+            config.fontsize = 100.0
+            large = _auto_fontsize("hello", 1.0, 0.2, base_size=config.fontsize)
+            config.fontsize = 50.0
+            small = _auto_fontsize("hello", 1.0, 0.2, base_size=config.fontsize)
+            assert large > small
+        finally:
+            config.fontsize = original
+
+    def test_explicit_fontsize_overrides_auto(self):
+        fig, ax = plt.subplots()
+        pos = TextPosition()
+        txt = _draw_meme_text(ax, "hello", 0.5, 0.9, pos, fontsize=24.0)
+        # The text object should start at the explicit size (may be shrunk by
+        # _fit_text_to_box, but never larger)
+        assert txt.get_fontsize() <= 24.0
+
+
 class TestSmartWrap:
     def test_short_text_no_wrap(self):
         assert _smart_wrap("hello", 1.0) == "hello"

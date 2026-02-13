@@ -7,6 +7,7 @@ DEFAULT_FONT = "impact"
 DEFAULT_COLOR = "white"
 DEFAULT_OUTLINE_COLOR = "black"
 DEFAULT_OUTLINE_WIDTH = 2.0
+DEFAULT_FONTSIZE = 72.0
 DEFAULT_DPI = 150
 DEFAULT_STYLE = "upper"
 DEFAULT_FIGSIZE_WIDTH = 8.0
@@ -33,6 +34,8 @@ class MemeplotlibConfig:
         Default text outline color.
     outline_width : float
         Default outline stroke width.
+    fontsize : float
+        Base font size in points for auto-sizing.
     dpi : int
         Default dots per inch for rendering.
     style : str
@@ -54,6 +57,7 @@ class MemeplotlibConfig:
     color: str = DEFAULT_COLOR
     outline_color: str = DEFAULT_OUTLINE_COLOR
     outline_width: float = DEFAULT_OUTLINE_WIDTH
+    fontsize: float = DEFAULT_FONTSIZE
     dpi: int = DEFAULT_DPI
     style: str = DEFAULT_STYLE
     cache_enabled: bool = True

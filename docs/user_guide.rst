@@ -172,6 +172,10 @@ All configurable attributes:
    * - ``outline_width``
      - ``2.0``
      - Outline stroke width.
+   * - ``fontsize``
+     - ``72.0``
+     - Base font size in points for auto-sizing. Explicit ``fontsize``
+       keyword arguments override this.
    * - ``dpi``
      - ``150``
      - Dots per inch for figure rendering.

@@ -109,6 +109,7 @@ import memeplotlib as memes
 
 memes.config.font = "comic"
 memes.config.color = "yellow"
+memes.config.fontsize = 120  # base font size in points
 memes.config.style = "none"  # don't auto-uppercase
 
 memes.meme("buzz", "custom defaults", "applied everywhere", show=False)
