@@ -16,6 +16,7 @@ project = "memeplotlib"
 copyright = "2025, Brian Keegan"
 author = "Brian Keegan"
 html_title = "memeplotlib"
+html_logo = "memeplotlib_logo.png"
 
 
 def _get_release() -> str:
