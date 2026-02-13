@@ -23,6 +23,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
+    "sphinx_gallery.gen_gallery",
 ]
 
 # Napoleon settings for NumPy-style docstrings
@@ -45,6 +46,20 @@ autodoc_default_options = {
     "members": True,
     "undoc-members": True,
     "show-inheritance": True,
+}
+
+# -- Sphinx-Gallery configuration -------------------------------------------
+
+sphinx_gallery_conf = {
+    "examples_dirs": ["../examples"],
+    "gallery_dirs": ["auto_examples"],
+    "filename_pattern": r"/plot_",
+    "matplotlib_animations": True,
+    "image_scrapers": ("matplotlib",),
+    "remove_config_comments": True,
+    "plot_gallery": "True",
+    "abort_on_example_error": False,
+    "only_warn_on_example_error": True,
 }
 
 # Intersphinx links to external projects

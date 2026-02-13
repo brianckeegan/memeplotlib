@@ -28,10 +28,16 @@ import memeplotlib as memes
 
 # One-liner meme from a memegen template
 memes.meme("buzz", "memes", "memes everywhere")
+```
 
+![buzz meme example](docs/_static/examples/readme_buzz_basic.png)
+
+```python
 # Save to file
 memes.meme("doge", "such code", "very bug", savefig="meme.png", show=False)
 ```
+
+![doge meme example](docs/_static/examples/readme_doge_savefig.png)
 
 ## Features
 
@@ -43,11 +49,19 @@ import memeplotlib as memes
 # Customize text styling
 memes.meme("drake", "writing tests", "shipping to prod",
            font="impact", color="yellow")
+```
 
+![drake functional example](docs/_static/examples/readme_drake_functional.png)
+
+```python
 # Get figure/axes back for further customization
 fig, ax = memes.meme("distracted", "my project", "new framework", "me",
                       show=False)
+```
 
+![distracted functional example](docs/_static/examples/readme_distracted_functional.png)
+
+```python
 # Use a local image as template
 memes.meme("/path/to/image.jpg", "top text", "bottom text")
 ```
@@ -62,10 +76,16 @@ m = Meme("buzz")
 m.top("memes")
 m.bottom("memes everywhere")
 m.save("output.png")
+```
 
+![buzz OO example](docs/_static/examples/readme_buzz_oo.png)
+
+```python
 # Or chained
 Meme("doge").top("such code").bottom("very bug").show()
 ```
+
+![doge OO example](docs/_static/examples/readme_doge_oo.png)
 
 ### Memify Existing Plots
 
@@ -79,6 +99,8 @@ fig, ax = plt.subplots()
 ax.plot([1, 2, 3], [1, 4, 9])
 memes.memify(fig, "stonks")
 ```
+
+![memify stonks example](docs/_static/examples/readme_memify_stonks.png)
 
 ### Global Configuration
 
