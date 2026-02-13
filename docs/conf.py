@@ -5,6 +5,7 @@
 
 import os
 import sys
+import json
 
 # Make sure the source directory is importable for autodoc
 sys.path.insert(0, os.path.abspath("../src"))
@@ -14,7 +15,23 @@ sys.path.insert(0, os.path.abspath("../src"))
 project = "memeplotlib"
 copyright = "2025, Brian Keegan"
 author = "Brian Keegan"
-release = "0.1.0"
+
+
+def _get_release() -> str:
+    """Resolve the docs release string from GitHub release metadata when available."""
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path and os.path.exists(event_path):
+        with open(event_path, encoding="utf-8") as event_file:
+            event_payload = json.load(event_file)
+
+        release_tag = event_payload.get("release", {}).get("tag_name")
+        if release_tag:
+            return release_tag
+
+    return os.environ.get("GITHUB_REF_NAME", "0.1.0")
+
+
+release = _get_release()
 
 # -- General configuration ---------------------------------------------------
 
