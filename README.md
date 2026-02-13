@@ -72,20 +72,20 @@ memes.meme("/path/to/image.jpg", "top text", "bottom text")
 from memeplotlib import Meme
 
 # Step by step
-m = Meme("buzz")
-m.top("memes")
-m.bottom("memes everywhere")
+m = Meme("drake")
+m.top("reading docs")
+m.bottom("guessing until it works")
 m.save("output.png")
 ```
 
-![buzz OO example](docs/_static/examples/readme_buzz_oo.png)
+![drake OO example](docs/_static/examples/readme_drake_oo.png)
 
 ```python
 # Or chained
-Meme("doge").top("such code").bottom("very bug").show()
+Meme("buzz").top("python").bottom("python everywhere").show()
 ```
 
-![doge OO example](docs/_static/examples/readme_doge_oo.png)
+![buzz OO chained example](docs/_static/examples/readme_buzz_oo_chained.png)
 
 ### Memify Existing Plots
 
@@ -110,7 +110,11 @@ import memeplotlib as memes
 memes.config.font = "comic"
 memes.config.color = "yellow"
 memes.config.style = "none"  # don't auto-uppercase
+
+memes.meme("buzz", "custom defaults", "applied everywhere", show=False)
 ```
+
+![global configuration example](docs/_static/examples/readme_config.png)
 
 ### Template Discovery
 

@@ -221,15 +221,23 @@ def generate_readme_images() -> None:
     )
     _save(fig, "readme_distracted_functional")
 
-    # OO API – buzz
-    tmpl = _get_template("buzz")
-    fig, _ = render_meme(tmpl, ["memes", "memes everywhere"])
-    _save(fig, "readme_buzz_oo")
+    # OO API – drake step-by-step
+    tmpl = _get_template("drake")
+    fig, _ = render_meme(tmpl, ["reading docs", "guessing until it works"])
+    _save(fig, "readme_drake_oo")
 
-    # OO API – doge chained
-    tmpl = _get_template("doge")
-    fig, _ = render_meme(tmpl, ["such code", "very bug"])
-    _save(fig, "readme_doge_oo")
+    # OO API – buzz chained
+    tmpl = _get_template("buzz")
+    fig, _ = render_meme(tmpl, ["python", "python everywhere"])
+    _save(fig, "readme_buzz_oo_chained")
+
+    # Global Configuration
+    tmpl = _get_template("buzz")
+    fig, _ = render_meme(
+        tmpl, ["custom defaults", "applied everywhere"],
+        font="comic", color="yellow", style="none",
+    )
+    _save(fig, "readme_config")
 
     # Memify existing plot
     fig, ax = plt.subplots()
