@@ -3,7 +3,7 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![memeplotlib logotype](/docs/_static/memeplotlib_logo.png)
+![memeplotlib logotype](/docs/_static/logo.png)
 
 Memes with Python's matplotlib. Create image macro memes using matplotlib for rendering and the [memegen](https://github.com/jacebrowning/memegen) API for template discovery.
 
