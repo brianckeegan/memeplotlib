@@ -75,12 +75,12 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 
-html_theme = "alabaster"
+html_theme = "pydata_sphinx_theme"
 html_theme_options = {
     "description": "Memes with Python's matplotlib",
     "github_user": "brianckeegan",
     "github_repo": "memeplotlib",
-    "github_banner": True,
+    "github_banner": False,
     "fixed_sidebar": True,
 }
 html_static_path = ["_static"]
