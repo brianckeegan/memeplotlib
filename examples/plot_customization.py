@@ -19,6 +19,17 @@ memes.meme(
 )
 
 # %%
+# Font Size
+# ----------
+#
+# Use ``fontsize`` to set the text size in points.
+
+memes.meme(
+    "buzz", "big text", "big memes",
+    fontsize=120, show=False,
+)
+
+# %%
 # Outline Control
 # ----------------
 #

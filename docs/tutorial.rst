@@ -86,6 +86,22 @@ Available ``font`` shortcuts: ``"impact"``, ``"arial"``, ``"comic"``,
 ``"times"``, ``"courier"``. You can also pass any font family name installed
 on your system.
 
+Font Size
+~~~~~~~~~~
+
+Use ``fontsize`` to set the text size in points. When omitted, font size is
+auto-calculated from the default base size (``config.fontsize``, 72 pt):
+
+.. code-block:: python
+
+   memes.meme("buzz", "big text", fontsize=120, show=False)
+
+You can also change the default base size globally:
+
+.. code-block:: python
+
+   memes.config.fontsize = 120
+
 Controlling Outline
 ~~~~~~~~~~~~~~~~~~~~
 

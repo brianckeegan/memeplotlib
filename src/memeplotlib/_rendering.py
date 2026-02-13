@@ -261,7 +261,7 @@ def _draw_meme_text(
     display_text = _smart_wrap(display_text, pos.scale_x)
 
     if fontsize is None:
-        fontsize = _auto_fontsize(display_text, pos.scale_x, pos.scale_y)
+        fontsize = _auto_fontsize(display_text, pos.scale_x, pos.scale_y, base_size=config.fontsize)
 
     font_family = _resolve_font(font)
 
