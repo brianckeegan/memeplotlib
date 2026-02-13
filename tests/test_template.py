@@ -138,6 +138,22 @@ class TestTemplate:
         t = Template.from_image(sample_image_file, name="My Template")
         assert t.name == "My Template"
 
+    def test_from_image_rejects_invalid_line_count(self):
+        with pytest.raises(ValueError, match="lines must be >= 1"):
+            Template.from_image("https://example.com/meme.png", lines=0)
+
+    def test_from_memegen_invalid_lines_falls_back_to_default(self):
+        t = Template._from_api_data(
+            {
+                "id": "buzz",
+                "name": "Buzz",
+                "lines": "invalid",
+                "blank": f"{API_BASE}/images/buzz.png",
+            },
+            API_BASE,
+        )
+        assert len(t.text_positions) == 2
+
     def test_get_image_preloaded(self, sample_template, sample_image):
         img = sample_template.get_image()
         assert isinstance(img, np.ndarray)
@@ -220,6 +236,10 @@ class TestResolveTemplate:
         t = _resolve_template("https://example.com/meme.png")
         assert isinstance(t, Template)
         assert t.image_url == "https://example.com/meme.png"
+
+    def test_missing_file_path_raises(self):
+        with pytest.raises(FileNotFoundError):
+            _resolve_template("./does_not_exist.png")
 
     @responses.activate
     def test_resolves_memegen_id(self):

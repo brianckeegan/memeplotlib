@@ -1,0 +1,61 @@
+name: Publish to Conda
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Publish target"
+        required: true
+        default: conda
+        type: choice
+        options:
+          - conda
+      conda_label:
+        description: "Optional Anaconda label (empty uses 'main')"
+        required: false
+        default: ""
+        type: string
+
+jobs:
+  publish-conda:
+    name: Build and publish conda package
+    runs-on: ubuntu-latest
+    if: >
+      (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'conda') ||
+      (github.event_name == 'release' && github.event.action == 'published')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          activate-environment: build
+          python-version: "3.10"
+
+      - name: Install build tools
+        shell: bash -el {0}
+        run: conda install -y conda-build anaconda-client
+
+      - name: Build conda package
+        shell: bash -el {0}
+        run: conda build conda-recipe
+
+      - name: Upload package to Anaconda
+        shell: bash -el {0}
+        env:
+          ANACONDA_API_TOKEN: ${{ secrets.ANACONDA_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANACONDA_API_TOKEN:-}" ]; then
+            echo "ANACONDA_API_TOKEN secret is required to publish conda packages."
+            exit 1
+          fi
+
+          PACKAGE_PATH="$(conda build conda-recipe --output)"
+          LABEL="${{ github.event.inputs.conda_label || 'main' }}"
+          anaconda --token "$ANACONDA_API_TOKEN" upload --user "$GITHUB_REPOSITORY_OWNER" --label "$LABEL" --skip-existing "$PACKAGE_PATH"
