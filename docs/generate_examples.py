@@ -2,9 +2,16 @@
 """Generate static example images for the README and documentation.
 
 This script produces PNG images for every code example in the README,
-tutorial, user guide, and API reference.  It tries to fetch templates from
-the memegen API first and falls back to synthetic placeholder backgrounds
-when the API is unreachable.
+tutorial, user guide, and API reference.
+
+Template images are resolved with a three-tier fallback:
+
+1. **memegen API** -- the canonical source (``api.memegen.link``).
+2. **GitHub raw** -- blank template images from the ``jacebrowning/memegen``
+   repository on ``raw.githubusercontent.com``.
+3. **Synthetic gradient** -- a coloured placeholder used only when neither
+   network source is reachable (e.g. ``expanding-brain``, which is not
+   stored in the memegen GitHub repo).
 
 Usage
 -----
@@ -17,13 +24,17 @@ Images are written to ``docs/_static/examples/``.
 
 from __future__ import annotations
 
+import io
 import sys
+import tempfile
+import urllib.request
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
+from PIL import Image  # noqa: E402
 
 # Ensure the local source tree is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
@@ -43,20 +54,39 @@ OUTPUT_DIR = Path(__file__).resolve().parent / "_static" / "examples"
 #  Template helpers
 # --------------------------------------------------------------------------- #
 
-# Palette used for synthetic backgrounds when the API is unavailable.
-_COLORS = {
+# Blank template images hosted in the memegen GitHub repository.
+# Used as a fallback when api.memegen.link is unreachable.
+_GITHUB_RAW_URLS: dict[str, str] = {
+    "buzz": "https://raw.githubusercontent.com/jacebrowning/memegen/main/templates/buzz/default.jpg",
+    "doge": "https://raw.githubusercontent.com/jacebrowning/memegen/main/templates/doge/default.jpg",
+    "drake": "https://raw.githubusercontent.com/jacebrowning/memegen/main/templates/drake/default.png",
+    "distracted": "https://raw.githubusercontent.com/jacebrowning/memegen/main/templates/db/default.jpg",
+}
+
+# Text positions taken from memegen config.yml for templates that need
+# non-default layouts.  Templates not listed here use DEFAULT_TEXT_POSITIONS.
+_CUSTOM_POSITIONS: dict[str, list[TextPosition]] = {
+    "distracted": [
+        TextPosition(anchor_x=0.12, anchor_y=0.70, scale_x=0.325, scale_y=0.10),
+        TextPosition(anchor_x=0.55, anchor_y=0.45, scale_x=0.175, scale_y=0.10),
+        TextPosition(anchor_x=0.74, anchor_y=0.66, scale_x=0.200, scale_y=0.10),
+    ],
+}
+
+# Templates with more than two text positions (used for gradient fallback).
+_MULTI_LINE_TEMPLATES: dict[str, int] = {
+    "distracted": 3,
+    "expanding-brain": 4,
+}
+
+# Palette used for synthetic gradient backgrounds as a last resort.
+_COLORS: dict[str, tuple[tuple[int, ...], tuple[int, ...]]] = {
     "buzz":       ((50, 80, 180), (100, 160, 220)),
     "doge":       ((200, 170, 80), (240, 210, 130)),
     "drake":      ((120, 60, 40), (200, 140, 100)),
     "distracted": ((60, 130, 80), (140, 200, 140)),
     "expanding-brain": ((80, 60, 120), (160, 130, 200)),
     "default":    ((70, 70, 90), (140, 140, 160)),
-}
-
-# Templates with more than two text positions.
-_MULTI_LINE_TEMPLATES = {
-    "distracted": 3,
-    "expanding-brain": 4,
 }
 
 
@@ -71,22 +101,42 @@ def _gradient(h: int, w: int, top: tuple[int, ...], bot: tuple[int, ...]) -> np.
     return img
 
 
-def _get_template(template_id: str) -> Template:
-    """Try the API first; fall back to a synthetic gradient background."""
-    try:
-        tmpl = _resolve_template(template_id)
-        # Force image download so we fail fast on network issues
-        tmpl.get_image()
-        return tmpl
-    except Exception:
-        pass
+def _download_from_github(template_id: str) -> Template | None:
+    """Download a blank template image from the memegen GitHub repo."""
+    url = _GITHUB_RAW_URLS.get(template_id)
+    if url is None:
+        return None
 
-    # Build a synthetic template
+    try:
+        with urllib.request.urlopen(url, timeout=30) as resp:
+            data = resp.read()
+    except Exception:
+        return None
+
+    img = Image.open(io.BytesIO(data)).convert("RGBA")
+    img_array = np.array(img)
+
+    positions = _CUSTOM_POSITIONS.get(template_id, list(DEFAULT_TEXT_POSITIONS))
+
+    tmpl = Template(
+        id=template_id,
+        name=template_id.replace("-", " ").title(),
+        image_url=url,
+        text_positions=positions,
+    )
+    tmpl._image_array = img_array
+    return tmpl
+
+
+def _make_synthetic(template_id: str) -> Template:
+    """Build a synthetic gradient template as a last resort."""
     lines_count = _MULTI_LINE_TEMPLATES.get(template_id, 2)
     colors = _COLORS.get(template_id, _COLORS["default"])
     bg = _gradient(600, 800, *colors)
 
-    if lines_count <= 2:
+    if template_id in _CUSTOM_POSITIONS:
+        positions = _CUSTOM_POSITIONS[template_id]
+    elif lines_count <= 2:
         positions = list(DEFAULT_TEXT_POSITIONS)
     else:
         slot = 1.0 / lines_count
@@ -103,6 +153,32 @@ def _get_template(template_id: str) -> Template:
     )
     tmpl._image_array = bg
     return tmpl
+
+
+def _get_template(template_id: str) -> Template:
+    """Resolve a template image with a three-tier fallback.
+
+    1. memegen API  (real template + API-provided positions)
+    2. GitHub raw    (real image  + positions from config.yml)
+    3. Synthetic gradient (coloured placeholder)
+    """
+    # --- tier 1: memegen API ---
+    try:
+        tmpl = _resolve_template(template_id)
+        tmpl.get_image()
+        return tmpl
+    except Exception:
+        pass
+
+    # --- tier 2: GitHub raw content ---
+    tmpl = _download_from_github(template_id)
+    if tmpl is not None:
+        print(f"    (fetched {template_id!r} from GitHub)")
+        return tmpl
+
+    # --- tier 3: synthetic gradient ---
+    print(f"    (using synthetic gradient for {template_id!r})")
+    return _make_synthetic(template_id)
 
 
 def _save(fig: plt.Figure, name: str, dpi: int = 150) -> None:
