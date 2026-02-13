@@ -141,7 +141,10 @@ class Template:
         example_lines = data.get("example", {}).get("text", [])
 
         # Parse text positions from API data if available, otherwise use defaults
-        lines_count = data.get("lines", 2)
+        try:
+            lines_count = max(1, int(data.get("lines", 2)))
+        except (TypeError, ValueError):
+            lines_count = 2
         if lines_count <= 2:
             text_positions = list(DEFAULT_TEXT_POSITIONS)
         else:
@@ -196,6 +199,9 @@ class Template:
         >>> t = Template.from_image("photo.jpg")  # doctest: +SKIP
         >>> t = Template.from_image("https://example.com/img.png", lines=3)  # doctest: +SKIP
         """
+        if lines < 1:
+            raise ValueError("lines must be >= 1")
+
         if path_or_url.startswith(("http://", "https://")):
             image_url = path_or_url
             template_id = Path(path_or_url).stem
@@ -424,6 +430,7 @@ def _resolve_template(
     ):
         if p.exists():
             return Template.from_image(template)
+        raise FileNotFoundError(f"Template image file not found: {template}")
 
     # Check if it's a URL
     if template.startswith(("http://", "https://")):
