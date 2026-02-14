@@ -404,9 +404,9 @@ def _resolve_template(
 
     Resolution order:
 
-    1. Local file path (contains ``/`` or ``\\`` or ends with an image
+    1. URL (starts with ``http://`` or ``https://``)
+    2. Local file path (contains ``/`` or ``\\`` or ends with an image
        extension)
-    2. URL (starts with ``http://`` or ``https://``)
     3. memegen template ID
 
     Parameters
@@ -421,6 +421,10 @@ def _resolve_template(
     Template
         The resolved template.
     """
+    # Check if it's a URL
+    if template.startswith(("http://", "https://")):
+        return Template.from_image(template)
+
     # Check if it's a file path
     p = Path(template)
     if (
@@ -431,10 +435,6 @@ def _resolve_template(
         if p.exists():
             return Template.from_image(template)
         raise FileNotFoundError(f"Template image file not found: {template}")
-
-    # Check if it's a URL
-    if template.startswith(("http://", "https://")):
-        return Template.from_image(template)
 
     # Treat as memegen template ID
     reg = registry or _default_registry()

@@ -42,8 +42,11 @@ jobs:
         run: conda install -y conda-build anaconda-client
 
       - name: Build conda package
+        id: build
         shell: bash -el {0}
-        run: conda build conda-recipe
+        run: |
+          conda build conda-recipe
+          echo "package_path=$(conda build conda-recipe --output)" >> "$GITHUB_OUTPUT"
 
       - name: Upload package to Anaconda
         shell: bash -el {0}
@@ -56,6 +59,5 @@ jobs:
             exit 1
           fi
 
-          PACKAGE_PATH="$(conda build conda-recipe --output)"
           LABEL="${{ github.event.inputs.conda_label || 'main' }}"
-          anaconda --token "$ANACONDA_API_TOKEN" upload --user "$GITHUB_REPOSITORY_OWNER" --label "$LABEL" --skip-existing "$PACKAGE_PATH"
+          anaconda --token "$ANACONDA_API_TOKEN" upload --user "$GITHUB_REPOSITORY_OWNER" --label "$LABEL" --skip-existing "${{ steps.build.outputs.package_path }}"
