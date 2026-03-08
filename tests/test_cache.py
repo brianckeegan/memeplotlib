@@ -117,3 +117,23 @@ class TestCacheDirCreation:
         cache.set_catalog([{"id": "test"}])
         assert cache_dir.exists()
         assert (cache_dir / "images").exists()
+
+    def test_permission_error_raises_clear_message(self, tmp_path, mocker):
+        cache = TemplateCache(cache_dir=tmp_path / "cache")
+        mocker.patch.object(
+            type(cache._cache_dir), "mkdir",
+            side_effect=PermissionError("Permission denied"),
+        )
+        with pytest.raises(PermissionError, match="Cannot create cache directory"):
+            cache._ensure_dirs()
+
+
+class TestCorruptImageHandling:
+    def test_corrupt_disk_image_returns_none(self, cache):
+        cache._ensure_dirs()
+        key = cache._image_key("https://example.com/corrupt.png")
+        disk_path = cache._images_dir / f"{key}.png"
+        disk_path.write_bytes(b"not a valid image")
+
+        result = cache.get_image("https://example.com/corrupt.png")
+        assert result is None

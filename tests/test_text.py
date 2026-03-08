@@ -1,5 +1,7 @@
 """Tests for text encoding and wrapping utilities."""
 
+import pytest
+
 from memeplotlib._text import apply_style, decode_text_from_url, encode_text_for_url, wrap_text
 
 
@@ -89,3 +91,11 @@ class TestApplyStyle:
 
     def test_already_upper(self):
         assert apply_style("HELLO", "upper") == "HELLO"
+
+    def test_invalid_style_raises(self):
+        with pytest.raises(ValueError, match="Invalid style"):
+            apply_style("hello", "capitalize")
+
+    def test_invalid_style_empty_raises(self):
+        with pytest.raises(ValueError, match="Invalid style"):
+            apply_style("hello", "")

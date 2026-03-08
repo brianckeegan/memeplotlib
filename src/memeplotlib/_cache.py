@@ -46,8 +46,16 @@ class TemplateCache:
         self._max_memory = max_memory
 
     def _ensure_dirs(self) -> None:
-        self._cache_dir.mkdir(parents=True, exist_ok=True)
-        self._images_dir.mkdir(parents=True, exist_ok=True)
+        """Create cache directories if they don't exist."""
+        try:
+            self._cache_dir.mkdir(parents=True, exist_ok=True)
+            self._images_dir.mkdir(parents=True, exist_ok=True)
+        except PermissionError as e:
+            raise PermissionError(
+                f"Cannot create cache directory '{self._cache_dir}': {e}. "
+                f"Set config.cache_dir to a writable path or set "
+                f"config.cache_enabled = False to disable caching."
+            ) from e
 
     # --- Catalog (template list) ---
 
@@ -124,7 +132,7 @@ class TemplateCache:
                 img = np.array(Image.open(disk_path).convert("RGBA"))
                 self._memory_put(key, img)
                 return img
-            except Exception:
+            except (OSError, Image.DecompressionBombError):
                 return None
 
         return None
@@ -150,7 +158,7 @@ class TemplateCache:
         try:
             img = np.array(Image.open(disk_path).convert("RGBA"))
             self._memory_put(key, img)
-        except Exception:
+        except (OSError, Image.DecompressionBombError):
             pass
 
     def _memory_put(self, key: str, value: np.ndarray) -> None:

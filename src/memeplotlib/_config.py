@@ -11,6 +11,10 @@ DEFAULT_FONTSIZE = 72.0
 DEFAULT_DPI = 150
 DEFAULT_STYLE = "upper"
 DEFAULT_FIGSIZE_WIDTH = 8.0
+DEFAULT_API_TIMEOUT = 10
+DEFAULT_IMAGE_TIMEOUT = 15
+DEFAULT_MAX_RETRIES = 2
+DEFAULT_RETRY_BACKOFF = 0.5
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"}
 
@@ -62,6 +66,10 @@ class MemeplotlibConfig:
     style: str = DEFAULT_STYLE
     cache_enabled: bool = True
     cache_dir: str | None = None
+    api_timeout: int = DEFAULT_API_TIMEOUT
+    image_timeout: int = DEFAULT_IMAGE_TIMEOUT
+    max_retries: int = DEFAULT_MAX_RETRIES
+    retry_backoff: float = DEFAULT_RETRY_BACKOFF
 
 
 config = MemeplotlibConfig()
