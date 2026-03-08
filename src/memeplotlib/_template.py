@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -10,9 +11,25 @@ from typing import Any
 import numpy as np
 import requests
 from PIL import Image
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from memeplotlib._cache import TemplateCache
 from memeplotlib._config import DEFAULT_API_BASE, IMAGE_EXTENSIONS, config
+
+
+def _get_session() -> requests.Session:
+    """Create a requests session with retry logic from config."""
+    session = requests.Session()
+    retry = Retry(
+        total=config.max_retries,
+        backoff_factor=config.retry_backoff,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 
 class TemplateNotFoundError(Exception):
@@ -122,7 +139,7 @@ class Template:
         """
         base = api_base or config.api_base
         url = f"{base}/templates/{template_id}"
-        resp = requests.get(url, timeout=10)
+        resp = _get_session().get(url, timeout=config.api_timeout)
 
         if resp.status_code == 404:
             raise TemplateNotFoundError(f"Template '{template_id}' not found")
@@ -258,7 +275,7 @@ class Template:
 
         # Load from local file or URL
         if self.image_url.startswith(("http://", "https://")):
-            resp = requests.get(self.image_url, timeout=15)
+            resp = _get_session().get(self.image_url, timeout=config.image_timeout)
             resp.raise_for_status()
             image_bytes = resp.content
             img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
@@ -313,7 +330,7 @@ class TemplateRegistry:
                 return cached
 
         # Fetch from API
-        resp = requests.get(f"{self._api_base}/templates/", timeout=10)
+        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config.api_timeout)
         resp.raise_for_status()
         self._catalog = resp.json()
 
@@ -389,7 +406,7 @@ class TemplateRegistry:
     def refresh(self) -> None:
         """Force re-fetch of the template catalog from the API."""
         self._catalog = None
-        resp = requests.get(f"{self._api_base}/templates/", timeout=10)
+        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config.api_timeout)
         resp.raise_for_status()
         self._catalog = resp.json()
         if config.cache_enabled:
@@ -443,10 +460,14 @@ def _resolve_template(
 
 # Module-level singleton
 _registry: TemplateRegistry | None = None
+_registry_lock = threading.Lock()
 
 
 def _default_registry() -> TemplateRegistry:
     global _registry
-    if _registry is None:
-        _registry = TemplateRegistry()
-    return _registry
+    if _registry is not None:
+        return _registry
+    with _registry_lock:
+        if _registry is None:
+            _registry = TemplateRegistry()
+        return _registry

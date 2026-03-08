@@ -48,6 +48,9 @@ dev = [
     "ruff>=0.1.0",
 ]
 
+[project.scripts]
+memeplotlib = "memeplotlib.__main__:main"
+
 [project.urls]
 Homepage = "https://github.com/brianckeegan/memeplotlib"
 Documentation = "https://brianckeegan.github.io/memeplotlib/"

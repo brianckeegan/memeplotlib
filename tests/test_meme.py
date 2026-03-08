@@ -16,6 +16,18 @@ class TestMemeInit:
         m = Meme(sample_template)
         assert m._get_template() is sample_template
 
+    def test_from_template_object_not_clobbered(self, sample_template):
+        """Verify that passing a Template object doesn't get overwritten."""
+        m = Meme(sample_template)
+        assert m._template is sample_template
+        assert m._template_str is None
+
+    def test_from_template_object_renders(self, sample_template):
+        """Verify Meme(template_obj) can render without AttributeError."""
+        m = Meme(sample_template, "top", "bottom")
+        fig, ax = m.render()
+        assert isinstance(fig, plt.Figure)
+
     def test_from_string_with_lines(self, sample_template):
         m = Meme(sample_template, "top", "bottom")
         assert m._lines == ["top", "bottom"]

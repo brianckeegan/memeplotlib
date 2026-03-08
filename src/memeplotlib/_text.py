@@ -138,6 +138,9 @@ def wrap_text(text: str, max_chars_per_line: int = 30) -> str:
     return "\n".join(lines)
 
 
+_VALID_STYLES = {"upper", "lower", "none"}
+
+
 def apply_style(text: str, style: str) -> str:
     """Apply text style transformation.
 
@@ -153,6 +156,11 @@ def apply_style(text: str, style: str) -> str:
     str
         Transformed text.
 
+    Raises
+    ------
+    ValueError
+        If *style* is not one of the valid options.
+
     Examples
     --------
     >>> apply_style("hello", "upper")
@@ -162,6 +170,11 @@ def apply_style(text: str, style: str) -> str:
     >>> apply_style("Hello", "none")
     'Hello'
     """
+    if style not in _VALID_STYLES:
+        raise ValueError(
+            f"Invalid style {style!r}. Must be one of: "
+            f"{', '.join(sorted(_VALID_STYLES))}"
+        )
     if style == "upper":
         return text.upper()
     elif style == "lower":

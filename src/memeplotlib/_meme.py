@@ -63,11 +63,13 @@ class Meme:
         fontsize: float | None = None,
         style: str | None = None,
     ):
+        self._template_str: str | None = None
+        self._template: Template | None = None
+
         if isinstance(template, Template):
             self._template = template
         else:
             self._template_str = template
-            self._template: Template | None = None
 
         self._lines: list[str] = list(lines)
         self._font = font

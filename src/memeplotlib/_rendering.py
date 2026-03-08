@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import textwrap
+import threading
 import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -22,6 +23,15 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
     from matplotlib.text import Text
 
+# --- Constants ---
+
+_WRAP_CHARS_PER_FULL_WIDTH = 25  # estimated chars that fill full figure width at ~36pt
+_MIN_WRAP_WIDTH = 10  # minimum characters per wrapped line
+_FIT_TOLERANCE = 1.1  # allow text to exceed box by 10% before shrinking
+_FIT_MAX_ITERATIONS = 20  # maximum iterations for text-fitting loop
+_FIT_SHRINK_FACTOR = 0.95  # multiply by this when shrinking font to fit
+_MIN_TEXT_EXTENT = 0.01  # guard against near-zero text dimensions
+
 # --- Font handling ---
 
 _FONTS_DIR = Path(__file__).parent / "fonts"
@@ -35,6 +45,7 @@ _FONT_MAP = {
 }
 
 _bundled_font_registered = False
+_font_lock = threading.Lock()
 
 
 def _register_bundled_fonts() -> None:
@@ -42,11 +53,14 @@ def _register_bundled_fonts() -> None:
     global _bundled_font_registered
     if _bundled_font_registered:
         return
-    _bundled_font_registered = True
+    with _font_lock:
+        if _bundled_font_registered:
+            return
+        _bundled_font_registered = True
 
-    if _FONTS_DIR.is_dir():
-        for font_path in _FONTS_DIR.glob("*.ttf"):
-            fontManager.addfont(str(font_path))
+        if _FONTS_DIR.is_dir():
+            for font_path in _FONTS_DIR.glob("*.ttf"):
+                fontManager.addfont(str(font_path))
 
 
 def _resolve_font(font: str) -> str:
@@ -151,7 +165,7 @@ def _get_renderer(fig: Figure) -> matplotlib.backend_bases.RendererBase:
     if hasattr(canvas, "get_renderer"):
         try:
             return canvas.get_renderer()
-        except Exception:
+        except (RuntimeError, AttributeError):
             pass
     # Fallback: draw to create renderer
     fig.canvas.draw()
@@ -186,7 +200,7 @@ def _fit_text_to_box(
     fig = ax.get_figure()
     renderer = _get_renderer(fig)
 
-    for _ in range(20):
+    for _ in range(_FIT_MAX_ITERATIONS):
         bbox = txt.get_window_extent(renderer=renderer)
         # Convert to axes fraction
         inv = ax.transAxes.inverted()
@@ -194,7 +208,7 @@ def _fit_text_to_box(
         text_w = bbox_axes.width
         text_h = bbox_axes.height
 
-        if text_w <= box_w * 1.1 and text_h <= box_h * 1.1:
+        if text_w <= box_w * _FIT_TOLERANCE and text_h <= box_h * _FIT_TOLERANCE:
             break
 
         current = txt.get_fontsize()
@@ -202,8 +216,11 @@ def _fit_text_to_box(
             break
 
         # Scale down proportionally
-        scale = min(box_w / max(text_w, 0.01), box_h / max(text_h, 0.01))
-        new_size = max(min_fontsize, current * scale * 0.95)
+        scale = min(
+            box_w / max(text_w, _MIN_TEXT_EXTENT),
+            box_h / max(text_h, _MIN_TEXT_EXTENT),
+        )
+        new_size = max(min_fontsize, current * scale * _FIT_SHRINK_FACTOR)
         txt.set_fontsize(new_size)
 
 
@@ -311,7 +328,7 @@ def _smart_wrap(text: str, box_width_frac: float) -> str:
 
     # Estimate characters that fit based on box width fraction
     # At ~36pt on a typical figure, ~20 chars fill the full width
-    chars_per_line = max(10, int(box_width_frac * 25))
+    chars_per_line = max(_MIN_WRAP_WIDTH, int(box_width_frac * _WRAP_CHARS_PER_FULL_WIDTH))
     if len(text) <= chars_per_line:
         return text
 
@@ -474,16 +491,21 @@ def render_memify(
     style = style or config.style
 
     # Determine text positions based on layout preset
+    _VALID_POSITIONS = {"top-bottom", "top", "bottom", "center"}
+    if position not in _VALID_POSITIONS:
+        raise ValueError(
+            f"Invalid position {position!r}. Must be one of: "
+            f"{', '.join(sorted(_VALID_POSITIONS))}"
+        )
+
     if position == "top-bottom":
         positions = list(DEFAULT_TEXT_POSITIONS)
     elif position == "top":
         positions = [DEFAULT_TEXT_POSITIONS[0]]
     elif position == "bottom":
         positions = [DEFAULT_TEXT_POSITIONS[1]]
-    elif position == "center":
+    else:  # center
         positions = [TextPosition(anchor_x=0.0, anchor_y=0.4, scale_x=1.0, scale_y=0.2)]
-    else:
-        positions = list(DEFAULT_TEXT_POSITIONS)
 
     # Create a transparent overlay axes spanning the full figure
     overlay_ax = fig.add_axes([0, 0, 1, 1], facecolor="none")

@@ -210,3 +210,8 @@ class TestRenderMemify:
         render_memify(fig, ["centered"], position="center")
         overlay_ax = fig.axes[-1]
         assert len(overlay_ax.texts) == 1
+
+    def test_invalid_position_raises(self):
+        fig, ax = plt.subplots()
+        with pytest.raises(ValueError, match="Invalid position"):
+            render_memify(fig, ["text"], position="diagonal")
