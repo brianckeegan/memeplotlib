@@ -7,23 +7,25 @@ Quick start::
 
     import memeplotlib as memes
 
-    memes.meme("buzz", "memes", "memes everywhere")
+    fig, ax = memes.meme("buzz", "memes", "memes everywhere")
 
 """
 
 from memeplotlib._api import meme, memify
-from memeplotlib._config import config
+from memeplotlib._config import MemeplotlibConfig, config, rc_context
 from memeplotlib._meme import Meme
 from memeplotlib._template import Template, TemplateRegistry
 
 __version__ = "0.1.0"
 
 __all__ = [
-    "meme",
-    "memify",
     "Meme",
+    "MemeplotlibConfig",
     "Template",
     "TemplateRegistry",
-    "config",
     "__version__",
+    "config",
+    "meme",
+    "memify",
+    "rc_context",
 ]

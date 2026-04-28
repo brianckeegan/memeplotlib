@@ -20,7 +20,8 @@ def cache(tmp_path) -> TemplateCache:
 @pytest.fixture
 def sample_png_bytes(tmp_path) -> bytes:
     """Create a small PNG image in bytes."""
-    img = Image.fromarray(np.random.randint(0, 255, (50, 50, 3), dtype=np.uint8))
+    rng = np.random.default_rng(seed=0)
+    img = Image.fromarray(rng.integers(0, 255, (50, 50, 3), dtype=np.uint8))
     path = tmp_path / "sample.png"
     img.save(str(path))
     return path.read_bytes()
@@ -121,7 +122,8 @@ class TestCacheDirCreation:
     def test_permission_error_raises_clear_message(self, tmp_path, mocker):
         cache = TemplateCache(cache_dir=tmp_path / "cache")
         mocker.patch.object(
-            type(cache._cache_dir), "mkdir",
+            type(cache._cache_dir),
+            "mkdir",
             side_effect=PermissionError("Permission denied"),
         )
         with pytest.raises(PermissionError, match="Cannot create cache directory"):

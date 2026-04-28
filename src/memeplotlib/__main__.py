@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from typing import Any
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -28,7 +29,9 @@ def _build_parser() -> argparse.ArgumentParser:
     sp_create = sub.add_parser("create", help="Create a meme and save to file")
     sp_create.add_argument("template", help="Template ID, image path, or URL")
     sp_create.add_argument("lines", nargs="+", help="Text lines (top, bottom, ...)")
-    sp_create.add_argument("-o", "--output", default="meme.png", help="Output file path (default: meme.png)")
+    sp_create.add_argument(
+        "-o", "--output", default="meme.png", help="Output file path (default: meme.png)"
+    )
     sp_create.add_argument("--font", default=None, help="Font family name")
     sp_create.add_argument("--style", default=None, help="Text style: upper, lower, none")
 
@@ -114,7 +117,7 @@ def _cmd_create(args: argparse.Namespace) -> int:
 
     from memeplotlib._api import meme
 
-    kwargs: dict = {"show": False, "savefig": args.output}
+    kwargs: dict[str, Any] = {"show": False, "savefig": args.output}
     if args.font:
         kwargs["font"] = args.font
     if args.style:

@@ -166,6 +166,7 @@ checks = [
     "EX01",  # Don't require Examples section on every function
     "SA01",  # Don't require See Also section
     "ES01",  # Don't require extended summary
+    "GL01",  # Allow same-line summaries (matplotlib's convention)
     "GL08",  # Internal modules don't need module-level docstrings
     "SS06",  # Allow multi-line summaries when genuinely clearer
 ]

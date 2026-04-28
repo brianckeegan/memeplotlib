@@ -6,9 +6,8 @@ import textwrap
 import threading
 import warnings
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, cast
 
-import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib import patheffects
 from matplotlib.font_manager import FontProperties, findfont, fontManager
@@ -20,7 +19,8 @@ from memeplotlib._text import apply_style
 
 if TYPE_CHECKING:
     from matplotlib.axes import Axes
-    from matplotlib.figure import Figure
+    from matplotlib.backend_bases import RendererBase
+    from matplotlib.figure import Figure, SubFigure
     from matplotlib.text import Text
 
 # --- Constants ---
@@ -141,20 +141,21 @@ def _auto_fontsize(
     # Scale down for longer text
     length_factor = max(0.3, 1.0 - max_line_len / 60)
     # Scale down for more lines
-    lines_factor = max(0.4, 1.0 / (num_lines ** 0.5))
+    lines_factor = max(0.4, 1.0 / (num_lines**0.5))
     # Scale by box area
     area_factor = (box_width_frac * box_height_frac) ** 0.25
 
-    return base_size * length_factor * lines_factor * area_factor
+    return float(base_size * length_factor * lines_factor * area_factor)
 
 
-def _get_renderer(fig: Figure) -> matplotlib.backend_bases.RendererBase:
+def _get_renderer(fig: Figure | SubFigure) -> RendererBase:
     """Get a renderer from a figure, handling API differences across versions.
 
     Parameters
     ----------
-    fig : Figure
-        The matplotlib figure.
+    fig : Figure or SubFigure
+        The matplotlib figure (or subfigure) whose canvas should provide a
+        renderer.
 
     Returns
     -------
@@ -162,14 +163,17 @@ def _get_renderer(fig: Figure) -> matplotlib.backend_bases.RendererBase:
         The figure's renderer.
     """
     canvas = fig.canvas
-    if hasattr(canvas, "get_renderer"):
+    get_renderer = getattr(canvas, "get_renderer", None)
+    if get_renderer is not None:
         try:
-            return canvas.get_renderer()
+            return cast("RendererBase", get_renderer())
         except (RuntimeError, AttributeError):
             pass
     # Fallback: draw to create renderer
-    fig.canvas.draw()
-    return fig.canvas.get_renderer()
+    canvas.draw()
+    # mypy: get_renderer is documented on Agg/PDF/SVG canvases but not on
+    # FigureCanvasBase; rely on duck typing here.
+    return cast("RendererBase", canvas.get_renderer())  # type: ignore[attr-defined]
 
 
 def _fit_text_to_box(
@@ -198,6 +202,8 @@ def _fit_text_to_box(
         Minimum allowed font size in points (default: 8.0).
     """
     fig = ax.get_figure()
+    if fig is None:
+        return  # detached axes; nothing to render against
     renderer = _get_renderer(fig)
 
     for _ in range(_FIT_MAX_ITERATIONS):
@@ -211,7 +217,9 @@ def _fit_text_to_box(
         if text_w <= box_w * _FIT_TOLERANCE and text_h <= box_h * _FIT_TOLERANCE:
             break
 
-        current = txt.get_fontsize()
+        # mpl's Text.get_fontsize() is annotated as float|str, but it returns
+        # a numeric size at runtime once the text has been added to an axes.
+        current = float(txt.get_fontsize())
         if current <= min_fontsize:
             break
 
@@ -239,6 +247,7 @@ def _draw_meme_text(
     outline_width: float = 2.0,
     fontsize: float | None = None,
     style: str = "upper",
+    **text_kwargs: Any,
 ) -> Text:
     """Draw meme-style text with outline at the given axes-coordinate position.
 
@@ -266,6 +275,9 @@ def _draw_meme_text(
         Font size in points. Auto-calculated if ``None``.
     style : str, optional
         Text style (``"upper"``, ``"lower"``, ``"none"``).
+    **text_kwargs
+        Additional keyword arguments forwarded to :meth:`Axes.text`. User
+        values take precedence over the meme-specific defaults above.
 
     Returns
     -------
@@ -278,14 +290,13 @@ def _draw_meme_text(
     display_text = _smart_wrap(display_text, pos.scale_x)
 
     if fontsize is None:
-        fontsize = _auto_fontsize(display_text, pos.scale_x, pos.scale_y, base_size=config.fontsize)
+        fontsize = _auto_fontsize(
+            display_text, pos.scale_x, pos.scale_y, base_size=config["fontsize"]
+        )
 
     font_family = _resolve_font(font)
 
-    txt = ax.text(
-        x,
-        y,
-        display_text,
+    text_call_kwargs: dict[str, Any] = dict(
         transform=ax.transAxes,
         fontsize=fontsize,
         fontfamily=font_family,
@@ -299,6 +310,9 @@ def _draw_meme_text(
             patheffects.Normal(),
         ],
     )
+    text_call_kwargs.update(text_kwargs)
+
+    txt = ax.text(x, y, display_text, **text_call_kwargs)
 
     # Refine font size to fit the bounding box
     _fit_text_to_box(ax, txt, pos.scale_x, pos.scale_y)
@@ -351,6 +365,7 @@ def render_meme(
     fontsize: float | None = None,
     style: str | None = None,
     cache: TemplateCache | None = None,
+    **text_kwargs: Any,
 ) -> tuple[Figure, Axes]:
     """Render a meme image using matplotlib.
 
@@ -380,6 +395,9 @@ def render_meme(
         Text style (``"upper"``, ``"lower"``, ``"none"``).
     cache : TemplateCache or None, optional
         Template cache for image retrieval.
+    **text_kwargs
+        Additional keyword arguments forwarded to :meth:`Axes.text` for each
+        rendered caption.
 
     Returns
     -------
@@ -387,12 +405,12 @@ def render_meme(
         The matplotlib Figure and Axes containing the rendered meme.
     """
     # Apply defaults from config
-    dpi = dpi or config.dpi
-    font = font or config.font
-    color = color or config.color
-    outline_color = outline_color or config.outline_color
-    outline_width = outline_width if outline_width is not None else config.outline_width
-    style = style or config.style
+    dpi = dpi if dpi is not None else config["dpi"]
+    font = font or config["font"]
+    color = color or config["color"]
+    outline_color = outline_color or config["outline_color"]
+    outline_width = outline_width if outline_width is not None else config["outline_width"]
+    style = style or config["style"]
 
     # Load the background image
     img = template.get_image(cache=cache)
@@ -406,7 +424,12 @@ def render_meme(
             figsize = (fig_w, fig_h)
         fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
     else:
-        fig = ax.get_figure()
+        parent_fig = ax.get_figure()
+        if parent_fig is None:
+            raise RuntimeError("Provided ax has no associated Figure")
+        # Drawing onto existing axes always renders into a real Figure (not a
+        # SubFigure) at runtime, but the type checker can't know that.
+        fig = cast("Figure", parent_fig)
 
     # Display the background image edge-to-edge
     ax.imshow(img, aspect="auto")
@@ -436,6 +459,7 @@ def render_meme(
             outline_width=outline_width,
             fontsize=fontsize,
             style=style,
+            **text_kwargs,
         )
 
     return fig, ax
@@ -451,6 +475,7 @@ def render_memify(
     outline_width: float | None = None,
     fontsize: float | None = None,
     style: str | None = None,
+    **text_kwargs: Any,
 ) -> Figure:
     """Add meme text overlay to an existing matplotlib figure.
 
@@ -478,24 +503,27 @@ def render_memify(
         Font size in points (auto if ``None``).
     style : str or None, optional
         Text style (``"upper"``, ``"lower"``, ``"none"``).
+    **text_kwargs
+        Additional keyword arguments forwarded to :meth:`Axes.text` for each
+        rendered caption.
 
     Returns
     -------
     Figure
         The modified Figure with meme text overlay.
     """
-    font = font or config.font
-    color = color or config.color
-    outline_color = outline_color or config.outline_color
-    outline_width = outline_width if outline_width is not None else config.outline_width
-    style = style or config.style
+    font = font or config["font"]
+    color = color or config["color"]
+    outline_color = outline_color or config["outline_color"]
+    outline_width = outline_width if outline_width is not None else config["outline_width"]
+    style = style or config["style"]
 
     # Determine text positions based on layout preset
-    _VALID_POSITIONS = {"top-bottom", "top", "bottom", "center"}
-    if position not in _VALID_POSITIONS:
+    valid_positions = {"top-bottom", "top", "bottom", "center"}
+    if position not in valid_positions:
         raise ValueError(
             f"Invalid position {position!r}. Must be one of: "
-            f"{', '.join(sorted(_VALID_POSITIONS))}"
+            f"{', '.join(sorted(valid_positions))}"
         )
 
     if position == "top-bottom":
@@ -508,7 +536,7 @@ def render_memify(
         positions = [TextPosition(anchor_x=0.0, anchor_y=0.4, scale_x=1.0, scale_y=0.2)]
 
     # Create a transparent overlay axes spanning the full figure
-    overlay_ax = fig.add_axes([0, 0, 1, 1], facecolor="none")
+    overlay_ax = fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor="none")
     overlay_ax.set_xlim(0, 1)
     overlay_ax.set_ylim(0, 1)
     overlay_ax.axis("off")
@@ -533,6 +561,7 @@ def render_memify(
             outline_width=outline_width,
             fontsize=fontsize,
             style=style,
+            **text_kwargs,
         )
 
     return fig

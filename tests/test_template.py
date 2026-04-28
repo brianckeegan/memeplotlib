@@ -2,9 +2,6 @@
 
 from __future__ import annotations
 
-import json
-from pathlib import Path
-
 import numpy as np
 import pytest
 import responses
@@ -18,7 +15,6 @@ from memeplotlib._template import (
     TextPosition,
     _resolve_template,
 )
-
 
 API_BASE = "https://api.memegen.link"
 
@@ -246,14 +242,16 @@ class TestResolveTemplate:
         responses.add(
             responses.GET,
             f"{API_BASE}/templates/",
-            json=[{
-                "id": "buzz",
-                "name": "Buzz",
-                "lines": 2,
-                "blank": f"{API_BASE}/images/buzz.png",
-                "keywords": [],
-                "example": {"text": []},
-            }],
+            json=[
+                {
+                    "id": "buzz",
+                    "name": "Buzz",
+                    "lines": 2,
+                    "blank": f"{API_BASE}/images/buzz.png",
+                    "keywords": [],
+                    "example": {"text": []},
+                }
+            ],
             status=200,
         )
 

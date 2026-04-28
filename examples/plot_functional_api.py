@@ -16,8 +16,12 @@ options and figure access.
 import memeplotlib as memes
 
 memes.meme(
-    "drake", "writing tests", "shipping to prod",
-    font="impact", color="yellow", show=False,
+    "drake",
+    "writing tests",
+    "shipping to prod",
+    font="impact",
+    color="yellow",
+    show=False,
 )
 
 # %%
@@ -28,6 +32,9 @@ memes.meme(
 # continue to modify the plot.
 
 fig, ax = memes.meme(
-    "distracted", "my project", "new framework", "me",
+    "distracted",
+    "my project",
+    "new framework",
+    "me",
     show=False,
 )

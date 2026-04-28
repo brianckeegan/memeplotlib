@@ -15,15 +15,15 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
 from memeplotlib._cache import TemplateCache
-from memeplotlib._config import DEFAULT_API_BASE, IMAGE_EXTENSIONS, config
+from memeplotlib._config import IMAGE_EXTENSIONS, config
 
 
 def _get_session() -> requests.Session:
     """Create a requests session with retry logic from config."""
     session = requests.Session()
     retry = Retry(
-        total=config.max_retries,
-        backoff_factor=config.retry_backoff,
+        total=config["max_retries"],
+        backoff_factor=config["retry_backoff"],
         status_forcelist=[429, 500, 502, 503, 504],
     )
     adapter = HTTPAdapter(max_retries=retry)
@@ -82,7 +82,7 @@ DEFAULT_TEXT_POSITIONS = [
 class Template:
     """A meme template with a background image and text position metadata.
 
-    Attributes
+    Parameters
     ----------
     id : str
         Template identifier (e.g., ``"buzz"``, ``"drake"``).
@@ -90,21 +90,27 @@ class Template:
         Human-readable display name.
     image_url : str
         URL or local file path to the background image.
-    text_positions : list of TextPosition
-        Regions where text lines are rendered.
-    keywords : list of str
+    text_positions : list of TextPosition, optional
+        Regions where text lines are rendered. Defaults to a classic
+        top/bottom layout.
+    keywords : list of str, optional
         Search keywords associated with the template.
-    example : list of str
+    example : list of str, optional
         Example text lines for the template.
     """
 
     id: str
     name: str
     image_url: str
-    text_positions: list[TextPosition] = field(default_factory=lambda: list(DEFAULT_TEXT_POSITIONS))
+    text_positions: list[TextPosition] = field(
+        default_factory=lambda: list(DEFAULT_TEXT_POSITIONS)
+    )
     keywords: list[str] = field(default_factory=list)
     example: list[str] = field(default_factory=list)
-    _image_array: np.ndarray | None = field(default=None, repr=False, compare=False)
+
+    def __post_init__(self) -> None:
+        # Lazy-loaded image cache; not a public dataclass field.
+        self._image_array: np.ndarray | None = None
 
     @classmethod
     def from_memegen(
@@ -137,9 +143,9 @@ class Template:
         >>> t.name  # doctest: +SKIP
         'Buzz Lightyear'
         """
-        base = api_base or config.api_base
+        base = api_base or config["api_base"]
         url = f"{base}/templates/{template_id}"
-        resp = _get_session().get(url, timeout=config.api_timeout)
+        resp = _get_session().get(url, timeout=config["api_timeout"])
 
         if resp.status_code == 404:
             raise TemplateNotFoundError(f"Template '{template_id}' not found")
@@ -275,7 +281,7 @@ class Template:
 
         # Load from local file or URL
         if self.image_url.startswith(("http://", "https://")):
-            resp = _get_session().get(self.image_url, timeout=config.image_timeout)
+            resp = _get_session().get(self.image_url, timeout=config["image_timeout"])
             resp.raise_for_status()
             image_bytes = resp.content
             img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
@@ -296,8 +302,7 @@ class TemplateRegistry:
     Parameters
     ----------
     api_base : str or None, optional
-        Base URL for the memegen API. Uses :attr:`config.api_base
-        <MemeplotlibConfig.api_base>` if ``None``.
+        Base URL for the memegen API. Uses ``config["api_base"]`` if ``None``.
     cache : TemplateCache or None, optional
         Cache instance for storing template metadata.
 
@@ -313,7 +318,7 @@ class TemplateRegistry:
         api_base: str | None = None,
         cache: TemplateCache | None = None,
     ):
-        self._api_base = api_base or config.api_base
+        self._api_base = api_base or config["api_base"]
         self._cache = cache or TemplateCache()
         self._catalog: list[dict[str, Any]] | None = None
 
@@ -323,18 +328,18 @@ class TemplateRegistry:
             return self._catalog
 
         # Try disk cache
-        if config.cache_enabled:
+        if config["cache_enabled"]:
             cached = self._cache.get_catalog()
             if cached is not None:
                 self._catalog = cached
                 return cached
 
         # Fetch from API
-        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config.api_timeout)
+        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config["api_timeout"])
         resp.raise_for_status()
         self._catalog = resp.json()
 
-        if config.cache_enabled:
+        if config["cache_enabled"]:
             self._cache.set_catalog(self._catalog)
 
         return self._catalog
@@ -384,11 +389,13 @@ class TemplateRegistry:
         query_lower = query.lower()
         results = []
         for item in catalog:
-            searchable = " ".join([
-                item.get("id", ""),
-                item.get("name", ""),
-                " ".join(item.get("keywords", [])),
-            ]).lower()
+            searchable = " ".join(
+                [
+                    item.get("id", ""),
+                    item.get("name", ""),
+                    " ".join(item.get("keywords", [])),
+                ]
+            ).lower()
             if query_lower in searchable:
                 results.append(item)
         return results
@@ -406,10 +413,10 @@ class TemplateRegistry:
     def refresh(self) -> None:
         """Force re-fetch of the template catalog from the API."""
         self._catalog = None
-        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config.api_timeout)
+        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config["api_timeout"])
         resp.raise_for_status()
         self._catalog = resp.json()
-        if config.cache_enabled:
+        if config["cache_enabled"]:
             self._cache.set_catalog(self._catalog)
 
 
@@ -444,11 +451,7 @@ def _resolve_template(
 
     # Check if it's a file path
     p = Path(template)
-    if (
-        "/" in template
-        or "\\" in template
-        or p.suffix.lower() in IMAGE_EXTENSIONS
-    ):
+    if "/" in template or "\\" in template or p.suffix.lower() in IMAGE_EXTENSIONS:
         if p.exists():
             return Template.from_image(template)
         raise FileNotFoundError(f"Template image file not found: {template}")

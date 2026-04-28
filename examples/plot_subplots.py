@@ -13,6 +13,7 @@ Render memes side-by-side using matplotlib's subplot system.
 # subplot layout.
 
 import matplotlib.pyplot as plt
+
 import memeplotlib as memes
 
 fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))

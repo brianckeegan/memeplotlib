@@ -13,6 +13,7 @@ Overlay meme-style text on any matplotlib figure using
 # Turn an ordinary matplotlib plot into a meme by adding bold, outlined text.
 
 import matplotlib.pyplot as plt
+
 import memeplotlib as memes
 
 fig, ax = plt.subplots()

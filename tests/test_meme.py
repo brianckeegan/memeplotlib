@@ -3,12 +3,11 @@
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import pytest
 
 from memeplotlib._meme import Meme
-from memeplotlib._template import Template, DEFAULT_TEXT_POSITIONS
 
 
 class TestMemeInit:
