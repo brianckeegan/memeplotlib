@@ -8,9 +8,11 @@
 
 ![memeplotlib logotype](/docs/_static/logo.png)
 
-Memes with Python's matplotlib. Create image macro memes using matplotlib for
-rendering and the [memegen](https://github.com/jacebrowning/memegen) API for
-template discovery.
+Memes with Python's matplotlib. Create image-macro memes by either letting
+the [memegen](https://github.com/jacebrowning/memegen) API render them
+server-side (the default) or falling back to a local Pillow renderer when
+the API can't express what you want — custom local images, explicit per-line
+font sizes, custom outlines, or per-line position overrides.
 
 ## Installation
 
@@ -95,6 +97,48 @@ memes.config["fontsize"] = 96
 memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
 ```
 
+## Backends
+
+`memeplotlib` ships three rendering backends. The default `"auto"` policy
+picks the best fit; pass `backend="..."` to override.
+
+| Backend       | What it does                                                                                       | Honours                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `memegen`     | Builds a memegen rendering URL and `imshow`s the response. No client-side text drawing.            | `font`, `color`, `style`, `template_style`, `width`, `height`, `layout`, `background`, `overlays`, `extension` (`png`/`jpg`/`gif`/`webp`) |
+| `pillow`      | Downloads the blank, draws captions client-side with `PIL.ImageDraw`. Used for custom local images and any feature memegen can't express. | All caption styling including per-line `fontsize`, custom `outline_color` / `outline_width`, and per-line overrides via `Meme.line(...)`. |
+| `matplotlib`  | Legacy: draws captions with `Axes.text` + `patheffects.Stroke`. Kept for backwards compatibility.  | All caption styling **plus** `**kwargs` forwarded to `Axes.text` (e.g. `rotation`, `alpha`).                       |
+
+`backend="auto"` selects:
+
+- **`memegen`** — when the template comes from the memegen catalogue and the
+  caller didn't pass `fontsize`, a non-default `outline_color` /
+  `outline_width`, `**text_kwargs`, or per-line overrides.
+- **`pillow`** — for custom local images / arbitrary URLs, or when any of
+  the above client-only features were requested.
+
+```python
+# Default: memegen renders this server-side.
+memes.meme("buzz", "memes", "memes everywhere", template_style="default",
+           font="impact", width=600)
+
+# Pillow fallback — explicit fontsize forces it.
+memes.meme("/path/to/photo.jpg", "top", "bottom", fontsize=48,
+           outline_color="red", outline_width=4)
+
+# Per-line overrides force the Pillow backend.
+from memeplotlib import Meme
+Meme("buzz").top("hi").line(1, "world", fontsize=72, color="yellow").save("out.png")
+
+# Legacy matplotlib path (preserves old behaviour exactly):
+memes.meme("buzz", "rotated", rotation=15, alpha=0.8, backend="matplotlib")
+```
+
+See [`docs/url_construction.rst`](docs/url_construction.rst) for the full
+memegen URL grammar — escape table, query parameters, font / style / overlay
+reference — adapted from [jacebrowning/memegen #993][issue-993].
+
+[issue-993]: https://github.com/jacebrowning/memegen/issues/993
+
 ## Use from agents
 
 ```bash
@@ -121,11 +165,20 @@ sphinx-build -W docs docs/_build
 
 ## How it works
 
-1. Templates are fetched from the [memegen API](https://api.memegen.link)
-   (blank background images + metadata) and cached locally.
-2. Text is rendered with matplotlib's text system using
-   `patheffects.Stroke` for the classic outlined meme look.
-3. The bundled Anton font (Impact-like, SIL OFL licensed) is used as a
+1. Template metadata comes from the [memegen API](https://api.memegen.link)
+   (`/templates/`, `/templates/<id>`); blank backgrounds and rendered memes
+   alike are cached on disk.
+2. **Memegen backend** (default for memegen IDs): a fully-formed rendering
+   URL (`/images/<id>/<line_1>/.../<line_n>.<ext>?style=...&font=...`) is
+   built via `memeplotlib.build_memegen_url`. The composed image is fetched
+   and displayed with `Axes.imshow`.
+3. **Pillow backend** (default for custom images, or when client-only
+   features are requested): the blank is fetched once, then captions are
+   drawn with `PIL.ImageDraw` using stroke-aware text rendering and a
+   shrink-to-fit loop, and the composed RGBA array is `imshow`n.
+4. **Matplotlib backend** (legacy, opt-in): captions are drawn with
+   `Axes.text` plus `patheffects.Stroke` for the classic outlined look.
+5. The bundled Anton font (Impact-like, SIL OFL licensed) is used as a
    fallback for systems where Impact isn't installed.
 
 ## Related projects

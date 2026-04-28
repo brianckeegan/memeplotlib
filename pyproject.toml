@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "memeplotlib"
-version = "0.2.0"
+version = "0.5.0"
 description = "Memes with Python's matplotlib"
 readme = "README.md"
 license = "MIT"
@@ -107,6 +107,7 @@ markers = [
     "integration: marks integration tests (require network)",
     "mpl_image_compare: pytest-mpl image comparison test",
     "allow_network: opt out of the offline-only autouse fixture",
+    "uses_default_backend: opt out of the legacy matplotlib-backend fixture",
 ]
 
 [tool.coverage.run]

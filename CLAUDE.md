@@ -13,27 +13,64 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
 
 | Module | Role |
 |---|---|
-| `_api.py` | Functional API: `meme()`, `memify()`. |
-| `_meme.py` | OO API: `Meme` builder with chainable `top/bottom/text` and a `render/show/save` cycle. |
-| `_template.py` | `Template`, `TemplateRegistry`, memegen client (retry-aware via `requests.Session` + `urllib3.Retry`). |
-| `_rendering.py` | matplotlib-side rendering: bundled font registration, text fitting, outline drawing, `render_meme`, `render_memify`. |
-| `_text.py` | Text styling helpers (`upper`/`lower`/`none`) and memegen URL encoding. |
+| `_api.py` | Functional API: `meme()`, `memify()`. Sentinel-based detection of user-supplied knobs feeds the dispatcher's `auto`-backend selector. |
+| `_meme.py` | OO API: `Meme` builder with chainable `top/bottom/text/line/with_backend` and a `render/show/save` cycle. |
+| `_template.py` | `Template`, `TemplateRegistry`, memegen client (retry-aware via `requests.Session` + `urllib3.Retry`). `Template` now carries `lines_count`, `overlays_count`, `styles`, `is_memegen`. |
+| `_url.py` | memegen URL builder: `build_memegen_url`, `OverlaySpec`, `MEMEGEN_FONT_ALIASES`, `memegen_font_for`. |
+| `_rendering.py` | Three-backend dispatcher (`render_meme` / `render_memify`): server-side memegen URL fetch, Pillow client-side draw, and the legacy matplotlib `Axes.text` path. Backend auto-selection lives in `_select_backend`. |
+| `_pillow.py` | Pillow renderer: TTF resolution, multiline shrink-to-fit via `ImageDraw.textbbox`, stroke-aware caption drawing. |
+| `_text.py` | Text styling helpers (`upper`/`lower`/`none`) and memegen URL encoding (`encode_text_for_url`). |
 | `_config.py` | RcParams-style `MemeplotlibConfig` mapping + `rc_context` context manager. |
-| `_cache.py` | Two-level cache: in-memory LRU + disk cache via `platformdirs`. |
-| `__main__.py` | Argparse CLI: `memeplotlib {list,search,info,create}`. |
-| `_mcp.py` | (Phase 8) MCP server using the official `mcp` SDK. |
+| `_cache.py` | Two-level cache: in-memory LRU + disk cache via `platformdirs`. Caches both blanks and memegen-rendered URLs (keyed by URL hash). |
+| `__main__.py` | Argparse CLI: `memeplotlib {list,search,info,meme}`. |
+| `_mcp.py` | MCP server using the official `mcp` SDK. |
 | `fonts/Anton-Regular.ttf` | Bundled SIL OFL display font, registered at import time. |
 
 ## API contract — match this for new code
 
 - **`ax=None` pattern.** Public rendering functions accept `ax: Axes | None = None` and create a new figure/axes when `None`. Mirrors `seaborn` and `pandas.plot`.
 - **Return `(Figure, Axes)`** (or just `Axes` for single-axes helpers). Do **not** call `plt.show()` implicitly. `meme()` and `memify()` default to `show=False`.
-- **Forward `**kwargs` to `Axes.text`** for caption rendering. User values override the meme-specific defaults.
-- **`Meme` class is chainable** — `top/bottom/text` return `self`. Don't break this.
+- **`Meme` class is chainable** — `top/bottom/text/line/with_backend` return `self`. Don't break this.
 - **`config` is a `MutableMapping`**, not an attribute namespace. Use `config["font"] = ...`, never `config.font = ...`. For scoped overrides, use `with rc_context({"font": "comic"}):`.
 - **`config` keys are validated**: setting an unknown key raises `KeyError`; setting a wrong-typed value raises `ValueError`. The set of keys is fixed in `_config._VALIDATORS`.
 - **NumPy-format docstrings** for every public function and method. Sections in this order: Parameters, Returns, Raises, Notes, Examples. Same-line summaries (`"""Do X."""\n\nLong body...`) are the matplotlib convention and are excluded from `numpydoc validate` (GL01).
 - **Type hints on every public signature**, `mypy --strict src/memeplotlib` clean. Use `# type: ignore[code]` only for matplotlib internals that strict typing genuinely cannot express, with a one-line comment explaining why.
+
+### Rendering backends — match this for new code
+
+- **Three backends**: `"memegen"` (default for memegen catalogue templates),
+  `"pillow"` (default for custom images / when client-only knobs are
+  passed), `"matplotlib"` (legacy, opt-in). The `"auto"` policy picks
+  between the first two; `"matplotlib"` must be requested explicitly.
+- **Sentinel pattern in `meme()`**: every knob that should influence
+  backend selection (`outline_color`, `outline_width`, `fontsize`) defaults
+  to the module-private `_UNSET` sentinel — never `None` — so the
+  dispatcher can tell "user passed it" from "user accepted the default".
+- **Forward `**kwargs` to `Axes.text`** under the matplotlib backend only.
+  Passing any `**text_kwargs` under `backend="auto"` forces the Pillow
+  fallback; under `backend="memegen"` they are silently ignored (memegen
+  has no equivalent).
+- **memegen never honours custom outlines**: any non-default
+  `outline_color` / `outline_width` forces the Pillow backend under
+  `auto`. memegen always renders a hard-coded black stroke.
+- **Per-line overrides** belong on `Meme.line(index, text, ...)`, not
+  `Meme.text(index, text)`. `text()` keeps its existing
+  `(index, text)` signature; `line()` extends it with kwarg overrides
+  and forces the Pillow backend.
+- **Memegen font set is a closed set** — `_url.MEMEGEN_FONT_ALIASES`
+  enumerates names memegen accepts. `memegen_font_for(font)` returns
+  `None` for fonts memegen can't render; the dispatcher then routes to
+  Pillow.
+- **memegen URL escapes**: build URLs via `build_memegen_url`, never
+  string-concatenate paths. Empty lines are encoded as `_` to preserve
+  slot ordering. Tilde escapes (`~q`, `~a`, ...) must NOT be
+  percent-encoded by query-param quoting; `_format_query_value` keeps
+  `~,/:` safe.
+- **Backend selection respects `config["backend"]`**: `render_meme` first
+  collapses `backend="auto"` to `config["backend"]`, then runs the
+  heuristic in `_select_backend`. Tests can pin behaviour by setting
+  `config["backend"] = "matplotlib"` (the legacy autouse fixture in
+  `tests/conftest.py` does exactly this).
 
 ## Test conventions
 
@@ -129,7 +166,17 @@ memeplotlib-mcp   # reads JSON-RPC on stdin
 - **`cache_enabled = True` in tests will read from the user's real
   cache directory.** Tests touching the registry should
   `monkeypatch.setitem(config, "cache_enabled", False)` and supply a
-  `tmp_path` cache dir.
+  `tmp_path` cache dir. `Template.get_image()` honours
+  `config["cache_enabled"]` so disabling at the config level is
+  sufficient — you do not also need to construct a fresh `TemplateCache`.
+- **memegen rendered URLs are dynamic** — the path embeds caption text,
+  so test fixtures should mock with regex (use the
+  `memegen_rendered_pattern("buzz")` helper from
+  `tests/conftest.py`) rather than hard-coding the full URL.
+- **The legacy matplotlib-backend autouse fixture** in
+  `tests/conftest.py` pins `config["backend"] = "matplotlib"` for every
+  test. New tests that need to exercise the memegen / pillow paths
+  must opt in with `@pytest.mark.uses_default_backend`.
 
 ## Branching / PRs
 

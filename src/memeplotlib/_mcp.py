@@ -69,6 +69,14 @@ def render_meme_tool(
     top: str | None = None,
     bottom: str | None = None,
     out_path: str | None = None,
+    backend: str | None = None,
+    extension: str | None = None,
+    width: int | None = None,
+    height: int | None = None,
+    template_style: str | None = None,
+    font: str | None = None,
+    color: str | None = None,
+    fontsize: float | None = None,
 ) -> dict[str, str]:
     """Render a meme and return path + base64.
 
@@ -82,6 +90,20 @@ def render_meme_tool(
         Bottom caption text.
     out_path : str, optional
         Where to save the PNG. If None, a tempfile is used.
+    backend : str, optional
+        Override the renderer (``"auto"``, ``"memegen"``, ``"pillow"``,
+        ``"matplotlib"``).
+    extension : str, optional
+        Output format requested from memegen (``"png"``, ``"jpg"``,
+        ``"gif"``, ``"webp"``).
+    width, height : int, optional
+        Memegen output dimensions.
+    template_style : str, optional
+        Memegen template-specific style (e.g. ``"maga"``).
+    font, color : str, optional
+        Caption styling.
+    fontsize : float, optional
+        Explicit font size; forces the Pillow backend under ``"auto"``.
 
     Returns
     -------
@@ -98,7 +120,25 @@ def render_meme_tool(
         fd, out_path = tempfile.mkstemp(prefix="memeplotlib-", suffix=".png")
         os.close(fd)
 
-    _meme(template, *lines, savefig=out_path, show=False)
+    kwargs: dict[str, Any] = {"savefig": out_path, "show": False}
+    if backend is not None:
+        kwargs["backend"] = backend
+    if extension is not None:
+        kwargs["extension"] = extension
+    if width is not None:
+        kwargs["width"] = width
+    if height is not None:
+        kwargs["height"] = height
+    if template_style is not None:
+        kwargs["template_style"] = template_style
+    if font is not None:
+        kwargs["font"] = font
+    if color is not None:
+        kwargs["color"] = color
+    if fontsize is not None:
+        kwargs["fontsize"] = fontsize
+
+    _meme(template, *lines, **kwargs)
     return {"path": out_path, "base64_png": _encode_png(out_path)}
 
 

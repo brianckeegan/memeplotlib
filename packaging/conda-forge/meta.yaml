@@ -14,7 +14,7 @@
 # retired in favor of conda-forge/feedstocks/memeplotlib-feedstock.
 
 {% set name = "memeplotlib" %}
-{% set version = "0.2.0" %}
+{% set version = "0.5.0" %}
 
 package:
   name: {{ name|lower }}

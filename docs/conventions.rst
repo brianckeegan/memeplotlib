@@ -40,16 +40,46 @@ you want auto-display in a script.
 Forward ``**kwargs`` to ``Axes.text``
 --------------------------------------
 
-Both :func:`~memeplotlib.meme` and :func:`~memeplotlib.memify` accept
-extra ``**kwargs`` that are passed through to :meth:`Axes.text` for each
+:func:`~memeplotlib.memify` and the ``backend="matplotlib"`` /
+``backend="pillow"`` paths of :func:`~memeplotlib.meme` accept extra
+``**kwargs`` that are passed through to :meth:`Axes.text` for each
 rendered caption. This lets you tweak ``alpha``, ``rotation``, ``zorder``,
 or any other matplotlib text parameter without library-side support:
 
 .. code-block:: python
 
-   memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
+   memes.meme("buzz", "rotated", rotation=15, alpha=0.8, backend="matplotlib")
 
-User-supplied kwargs override the meme-specific defaults.
+Under ``backend="auto"``, passing any ``**text_kwargs`` forces the Pillow
+backend. memegen has no equivalent for arbitrary ``Axes.text`` arguments
+so they cannot be honoured by the server-side renderer.
+
+Backends
+---------
+
+memeplotlib ships three rendering backends:
+
+``"memegen"``
+    Build a memegen rendering URL via
+    :func:`~memeplotlib.build_memegen_url` and ``imshow`` the response.
+    Honours every memegen parameter — ``font``, ``color``, ``style``,
+    ``template_style``, ``width``, ``height``, ``layout``, ``background``,
+    ``overlays``, ``extension``.
+
+``"pillow"``
+    Download the blank, draw captions client-side with
+    :class:`PIL.ImageDraw.ImageDraw`. Honours per-line ``fontsize``, custom
+    outlines, and per-line overrides via :meth:`Meme.line`.
+
+``"matplotlib"``
+    Legacy: draw captions with :meth:`Axes.text` plus
+    :class:`patheffects.Stroke`. Forwards ``**kwargs`` to ``Axes.text``.
+
+The default ``"auto"`` selects ``"memegen"`` for memegen-catalogue
+templates with no client-only knobs, and ``"pillow"`` otherwise.
+Passing any of ``fontsize``, a non-default ``outline_color`` /
+``outline_width``, ``**text_kwargs``, or per-line overrides forces
+Pillow under ``auto``. See :doc:`url_construction` for the URL grammar.
 
 ``rc_context`` for scoped config overrides
 -------------------------------------------

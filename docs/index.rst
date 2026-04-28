@@ -36,6 +36,7 @@ Contents
 
    tutorial
    user_guide
+   url_construction
    conventions
    api
    auto_examples/index
