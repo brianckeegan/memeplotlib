@@ -1,13 +1,15 @@
 {% set name = "memeplotlib" %}
-{% set version = "0.1.0" %}
+{% set version = "0.2.0" %}
 
 package:
   name: {{ name|lower }}
   version: {{ version }}
 
 source:
+  # The sha256 is replaced at release time by publish_conda.yml; the
+  # placeholder below is intentionally not a real PyPI hash.
   url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
-  sha256: "273550e4c6222a3b7532de6e82f7421c61d650c70af4334f4abe9a0ee294531d"
+  sha256: "REPLACE_AT_RELEASE_TIME"
 
 build:
   noarch: python
@@ -21,7 +23,7 @@ requirements:
     - hatchling
   run:
     - python >=3.10
-    - matplotlib-base >=3.0.0
+    - matplotlib-base >=3.8.0
     - requests >=2.20.0
     - numpy >=1.16.0
     - platformdirs >=2.0.0
@@ -32,6 +34,7 @@ test:
     - memeplotlib
   commands:
     - pip check
+    - memeplotlib --help
   requires:
     - pip
 
