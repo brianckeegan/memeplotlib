@@ -1,3 +1,6 @@
+[![CI](https://github.com/brianckeegan/memeplotlib/actions/workflows/ci.yml/badge.svg)](https://github.com/brianckeegan/memeplotlib/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/brianckeegan/memeplotlib/graph/badge.svg)](https://codecov.io/gh/brianckeegan/memeplotlib)
+[![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianckeegan.github.io/memeplotlib/)
 [![PyPI version](https://img.shields.io/pypi/v/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
 [![conda-forge version](https://img.shields.io/conda/vn/conda-forge/memeplotlib.svg)](https://anaconda.org/conda-forge/memeplotlib)
 [![Python versions](https://img.shields.io/pypi/pyversions/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
@@ -5,95 +8,66 @@
 
 ![memeplotlib logotype](/docs/_static/logo.png)
 
-Memes with Python's matplotlib. Create image macro memes using matplotlib for rendering and the [memegen](https://github.com/jacebrowning/memegen) API for template discovery.
+Memes with Python's matplotlib. Create image macro memes using matplotlib for
+rendering and the [memegen](https://github.com/jacebrowning/memegen) API for
+template discovery.
 
 ## Installation
 
-**pip:**
-
 ```bash
 pip install memeplotlib
-```
-
-**conda:**
-
-```bash
+# or
 conda install -c conda-forge memeplotlib
 ```
 
-## Quick Start
+For the [Model Context Protocol](https://modelcontextprotocol.io) server (use
+memes from Claude Desktop / Claude Code / any MCP client):
+
+```bash
+pip install "memeplotlib[mcp]"
+```
+
+## Quick start
 
 ```python
 import memeplotlib as memes
 
-# One-liner meme from a memegen template
-memes.meme("buzz", "memes", "memes everywhere")
+fig, ax = memes.meme("buzz", "memes", "memes everywhere")
+fig.savefig("buzz.png")
 ```
 
 ![buzz meme example](docs/_static/examples/readme_buzz_basic.png)
 
-```python
-# Save to file
-memes.meme("doge", "such code", "very bug", savefig="meme.png", show=False)
-```
-
-![doge meme example](docs/_static/examples/readme_doge_savefig.png)
+The function returns `(Figure, Axes)` — same convention as `seaborn`,
+`pandas.plot`, and other matplotlib extensions. It does not call
+`plt.show()` implicitly. Pass `show=True` if you want auto-display.
 
 ## Features
 
-### Functional API
+**Memegen IDs, file paths, or URLs as templates:**
 
 ```python
-import memeplotlib as memes
-
-# Customize text styling
-memes.meme("drake", "writing tests", "shipping to prod",
-           font="impact", color="yellow")
+memes.meme("drake", "writing tests", "shipping to prod", color="yellow")
+memes.meme("/path/to/image.jpg", "top text", "bottom text")
+memes.meme("https://example.com/image.png", "from a URL")
 ```
 
 ![drake functional example](docs/_static/examples/readme_drake_functional.png)
 
-```python
-# Get figure/axes back for further customization
-fig, ax = memes.meme("distracted", "my project", "new framework", "me",
-                      show=False)
-```
-
-![distracted functional example](docs/_static/examples/readme_distracted_functional.png)
-
-```python
-# Use a local image as template
-memes.meme("/path/to/image.jpg", "top text", "bottom text")
-```
-
-### Object-Oriented API
+**Object-oriented `Meme` builder, chainable:**
 
 ```python
 from memeplotlib import Meme
 
-# Step by step
-m = Meme("drake")
-m.top("reading docs")
-m.bottom("guessing until it works")
-m.save("output.png")
-```
-
-![drake OO example](docs/_static/examples/readme_drake_oo.png)
-
-```python
-# Or chained
-Meme("buzz").top("python").bottom("python everywhere").show()
+Meme("buzz").top("python").bottom("python everywhere").save("buzz.png")
 ```
 
 ![buzz OO chained example](docs/_static/examples/readme_buzz_oo_chained.png)
 
-### Memify Existing Plots
-
-Turn any matplotlib figure into a meme:
+**Memify existing matplotlib figures:**
 
 ```python
 import matplotlib.pyplot as plt
-import memeplotlib as memes
 
 fig, ax = plt.subplots()
 ax.plot([1, 2, 3], [1, 4, 9])
@@ -102,62 +76,75 @@ memes.memify(fig, "stonks")
 
 ![memify stonks example](docs/_static/examples/readme_memify_stonks.png)
 
-### Global Configuration
+**RcParams-style scoped configuration:**
 
 ```python
-import memeplotlib as memes
+with memes.rc_context({"font": "comic", "color": "yellow"}):
+    memes.meme("buzz", "scoped style", "no leakage")
+# defaults are auto-restored here
 
-memes.config.font = "comic"
-memes.config.color = "yellow"
-memes.config.fontsize = 120  # base font size in points
-memes.config.style = "none"  # don't auto-uppercase
-
-memes.meme("buzz", "custom defaults", "applied everywhere", show=False)
+# Or set globally:
+memes.config["fontsize"] = 96
 ```
 
 ![global configuration example](docs/_static/examples/readme_config.png)
 
-### Template Discovery
+**Forward `**kwargs` to `Axes.text`:**
 
 ```python
-from memeplotlib import TemplateRegistry
-
-reg = TemplateRegistry()
-results = reg.search("dog")
-all_templates = reg.list_all()
+memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
 ```
+
+## Use from agents
+
+```bash
+pip install "memeplotlib[mcp]"
+memeplotlib-mcp                                 # boot the MCP server (stdio)
+memeplotlib meme buzz "hello" "world" -o /tmp/  # CLI render
+```
+
+The MCP server exposes `meme`, `search_templates`, and `list_templates`
+tools. The CLI is useful even without MCP — agent harnesses can shell
+out, and CI scripts can render directly.
 
 ## Documentation
 
-Full documentation including a tutorial, user guide, and API reference is
-available at [brianckeegan.github.io/memeplotlib](https://brianckeegan.github.io/memeplotlib/).
+Full docs including a tutorial, user guide, conventions reference, and API
+reference: [brianckeegan.github.io/memeplotlib](https://brianckeegan.github.io/memeplotlib/).
 
-To build the docs locally:
+Build locally:
 
 ```bash
 pip install -e ".[docs]"
-cd docs
-make html
-open _build/html/index.html
+sphinx-build -W docs docs/_build
 ```
 
-## How It Works
+## How it works
 
-1. Templates are fetched from the [memegen API](https://api.memegen.link) (blank background images + metadata)
-2. Images are cached locally for offline reuse
-3. Text is rendered using matplotlib's text system with `patheffects.Stroke` for the classic outlined meme look
-4. An Impact-like font (Anton) is bundled as a fallback for systems where Impact isn't installed
+1. Templates are fetched from the [memegen API](https://api.memegen.link)
+   (blank background images + metadata) and cached locally.
+2. Text is rendered with matplotlib's text system using
+   `patheffects.Stroke` for the classic outlined meme look.
+3. The bundled Anton font (Impact-like, SIL OFL licensed) is used as a
+   fallback for systems where Impact isn't installed.
+
+## Related projects
+
+- [matplotlib](https://matplotlib.org/) — the rendering engine.
+- [memegen](https://github.com/jacebrowning/memegen) — the template registry
+  and blank-image source (api.memegen.link).
+- [seaborn](https://seaborn.pydata.org/) — the API conventions for
+  `ax=None`, `**kwargs` forwarding, and `(fig, ax)` returns are modeled on
+  seaborn.
 
 ## Dependencies
 
-- `matplotlib >= 3.0.0`
-- `requests`
-- `numpy`
-- `Pillow`
-- `platformdirs`
+- `matplotlib >= 3.8`
+- `numpy`, `requests`, `Pillow`, `platformdirs`
 
 Requires Python 3.10+.
 
 ## License
 
-MIT
+MIT. The bundled Anton font is licensed under the
+[SIL Open Font License v1.1](src/memeplotlib/fonts/OFL.txt).

@@ -10,7 +10,7 @@ Create image macro memes using matplotlib for rendering and the
 
    import memeplotlib as memes
 
-   memes.meme("buzz", "memes", "memes everywhere")
+   fig, ax = memes.meme("buzz", "memes", "memes everywhere")
 
 .. image:: _static/examples/tutorial_first_meme.png
    :alt: Buzz Lightyear "memes / memes everywhere"
@@ -36,6 +36,7 @@ Contents
 
    tutorial
    user_guide
+   conventions
    api
    auto_examples/index
 
