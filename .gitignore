@@ -16,5 +16,7 @@ htmlcov/
 venv/
 env/
 docs/_build/
+docs/_build_baseline/
 docs/auto_examples/
 docs/sg_execution_times.rst
+tests/baseline_results/
