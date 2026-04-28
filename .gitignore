@@ -23,3 +23,5 @@ tests/baseline_results/
 
 # Sphinx-gallery sometimes writes example outputs into the source dir
 examples/*.png
+
+.claude/
