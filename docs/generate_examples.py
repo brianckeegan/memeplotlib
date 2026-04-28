@@ -26,11 +26,11 @@ from __future__ import annotations
 
 import io
 import sys
-import tempfile
 import urllib.request
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
@@ -39,7 +39,6 @@ from PIL import Image  # noqa: E402
 # Ensure the local source tree is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from memeplotlib._config import config  # noqa: E402
 from memeplotlib._rendering import render_meme, render_memify  # noqa: E402
 from memeplotlib._template import (  # noqa: E402
     DEFAULT_TEXT_POSITIONS,
@@ -81,12 +80,12 @@ _MULTI_LINE_TEMPLATES: dict[str, int] = {
 
 # Palette used for synthetic gradient backgrounds as a last resort.
 _COLORS: dict[str, tuple[tuple[int, ...], tuple[int, ...]]] = {
-    "buzz":       ((50, 80, 180), (100, 160, 220)),
-    "doge":       ((200, 170, 80), (240, 210, 130)),
-    "drake":      ((120, 60, 40), (200, 140, 100)),
+    "buzz": ((50, 80, 180), (100, 160, 220)),
+    "doge": ((200, 170, 80), (240, 210, 130)),
+    "drake": ((120, 60, 40), (200, 140, 100)),
     "distracted": ((60, 130, 80), (140, 200, 140)),
     "expanding-brain": ((80, 60, 120), (160, 130, 200)),
-    "default":    ((70, 70, 90), (140, 140, 160)),
+    "default": ((70, 70, 90), (140, 140, 160)),
 }
 
 
@@ -209,15 +208,18 @@ def generate_readme_images() -> None:
     # Functional API – drake
     tmpl = _get_template("drake")
     fig, _ = render_meme(
-        tmpl, ["writing tests", "shipping to prod"],
-        font="impact", color="yellow",
+        tmpl,
+        ["writing tests", "shipping to prod"],
+        font="impact",
+        color="yellow",
     )
     _save(fig, "readme_drake_functional")
 
     # Functional API – distracted
     tmpl = _get_template("distracted")
     fig, _ = render_meme(
-        tmpl, ["my project", "new framework", "me"],
+        tmpl,
+        ["my project", "new framework", "me"],
     )
     _save(fig, "readme_distracted_functional")
 
@@ -234,8 +236,11 @@ def generate_readme_images() -> None:
     # Global Configuration
     tmpl = _get_template("buzz")
     fig, _ = render_meme(
-        tmpl, ["custom defaults", "applied everywhere"],
-        font="comic", color="yellow", style="none",
+        tmpl,
+        ["custom defaults", "applied everywhere"],
+        font="comic",
+        color="yellow",
+        style="none",
     )
     _save(fig, "readme_config")
 
@@ -267,16 +272,22 @@ def generate_tutorial_images() -> None:
     # Customizing Text
     tmpl = _get_template("drake")
     fig, _ = render_meme(
-        tmpl, ["writing tests", "shipping to prod"],
-        font="impact", color="yellow", style="upper",
+        tmpl,
+        ["writing tests", "shipping to prod"],
+        font="impact",
+        color="yellow",
+        style="upper",
     )
     _save(fig, "tutorial_custom_text")
 
     # Controlling Outline
     tmpl = _get_template("buzz")
     fig, _ = render_meme(
-        tmpl, ["white on black", "the classic"],
-        color="white", outline_color="black", outline_width=3.0,
+        tmpl,
+        ["white on black", "the classic"],
+        color="white",
+        outline_color="black",
+        outline_width=3.0,
     )
     _save(fig, "tutorial_outline")
 
@@ -302,9 +313,13 @@ def generate_user_guide_images() -> None:
     # Functional API – drake styled
     tmpl = _get_template("drake")
     fig, _ = render_meme(
-        tmpl, ["writing tests", "shipping to prod"],
-        font="impact", color="yellow", outline_color="blue",
-        outline_width=3.0, style="none",
+        tmpl,
+        ["writing tests", "shipping to prod"],
+        font="impact",
+        color="yellow",
+        outline_color="blue",
+        outline_width=3.0,
+        style="none",
     )
     _save(fig, "ug_functional_drake_styled")
 
@@ -321,7 +336,8 @@ def generate_user_guide_images() -> None:
     # OO API – expanding brain
     tmpl = _get_template("expanding-brain")
     fig, _ = render_meme(
-        tmpl, ["using print()", "using logging", "using a debugger", "reading the source"],
+        tmpl,
+        ["using print()", "using logging", "using a debugger", "reading the source"],
     )
     _save(fig, "ug_oo_expanding_brain")
 
@@ -346,8 +362,11 @@ def generate_user_guide_images() -> None:
     # Global Configuration
     tmpl = _get_template("buzz")
     fig, _ = render_meme(
-        tmpl, ["custom defaults", "applied everywhere"],
-        font="comic", color="yellow", style="none",
+        tmpl,
+        ["custom defaults", "applied everywhere"],
+        font="comic",
+        color="yellow",
+        style="none",
     )
     _save(fig, "ug_config")
 

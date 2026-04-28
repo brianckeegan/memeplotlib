@@ -6,9 +6,9 @@ Run with: pytest tests/test_integration.py -v -m integration
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import pytest
-
 
 pytestmark = [pytest.mark.slow, pytest.mark.integration]
 
@@ -62,6 +62,7 @@ class TestEndToEnd:
 
     def test_memify_plot(self, tmp_path):
         import matplotlib.pyplot as plt
+
         import memeplotlib as memes
 
         fig, ax = plt.subplots()

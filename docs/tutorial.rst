@@ -90,17 +90,17 @@ Font Size
 ~~~~~~~~~~
 
 Use ``fontsize`` to set the text size in points. When omitted, font size is
-auto-calculated from the default base size (``config.fontsize``, 72 pt):
+auto-calculated from the default base size (``config["fontsize"]``, 72 pt):
 
 .. code-block:: python
 
-   memes.meme("buzz", "big text", fontsize=120, show=False)
+   memes.meme("buzz", "big text", fontsize=120)
 
 You can also change the default base size globally:
 
 .. code-block:: python
 
-   memes.config.fontsize = 120
+   memes.config["fontsize"] = 120
 
 Controlling Outline
 ~~~~~~~~~~~~~~~~~~~~

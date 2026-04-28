@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 
@@ -84,6 +84,7 @@ class Meme:
 
     def _get_template(self) -> Template:
         if self._template is None:
+            assert self._template_str is not None  # set by __init__ when _template is None
             self._template = _resolve_template(self._template_str)
         return self._template
 
@@ -195,7 +196,7 @@ class Meme:
             self.render()
         plt.show()
 
-    def save(self, path: str | Path, dpi: int | None = None, **kwargs) -> None:
+    def save(self, path: str | Path, dpi: int | None = None, **kwargs: Any) -> None:
         """Render and save the meme to a file.
 
         Parameters
@@ -210,9 +211,10 @@ class Meme:
         """
         if self._fig is None:
             self.render(dpi=dpi)
+        assert self._fig is not None  # render() always assigns self._fig
         self._fig.savefig(
             str(path),
-            dpi=dpi or config.dpi,
+            dpi=dpi if dpi is not None else config["dpi"],
             bbox_inches="tight",
             pad_inches=0,
             **kwargs,

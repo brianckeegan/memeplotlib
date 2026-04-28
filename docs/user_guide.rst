@@ -133,19 +133,29 @@ The ``position`` parameter controls text layout:
 Global Configuration
 ---------------------
 
-The :data:`~memeplotlib.config` object (an instance of
-:class:`~memeplotlib._config.MemeplotlibConfig`) holds defaults that apply
-to every meme creation call unless overridden by keyword arguments:
+The :data:`~memeplotlib.config` mapping (a
+:class:`~memeplotlib.MemeplotlibConfig`) holds defaults that apply
+to every meme creation call unless overridden by keyword arguments. It
+behaves like :data:`matplotlib.rcParams` — a validated key-value store:
 
 .. code-block:: python
 
    import memeplotlib as memes
 
-   memes.config.font = "comic"
-   memes.config.color = "yellow"
-   memes.config.outline_color = "blue"
-   memes.config.outline_width = 3.0
-   memes.config.style = "none"
+   memes.config["font"] = "comic"
+   memes.config["color"] = "yellow"
+   memes.config["outline_color"] = "blue"
+   memes.config["outline_width"] = 3.0
+   memes.config["style"] = "none"
+
+For scoped overrides that auto-restore on block exit, use
+:func:`~memeplotlib.rc_context`:
+
+.. code-block:: python
+
+   with memes.rc_context({"color": "yellow", "font": "comic"}):
+       memes.meme("buzz", "scoped style")
+   # config is back to its prior values here
 
 .. image:: _static/examples/ug_config.png
    :alt: Meme rendered with global configuration overrides
@@ -260,7 +270,7 @@ To disable caching entirely:
 .. code-block:: python
 
    import memeplotlib as memes
-   memes.config.cache_enabled = False
+   memes.config["cache_enabled"] = False
 
 Rendering onto Existing Axes
 -----------------------------

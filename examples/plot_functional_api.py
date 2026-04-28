@@ -16,8 +16,12 @@ options and figure access.
 import memeplotlib as memes
 
 memes.meme(
-    "drake", "writing tests", "shipping to prod",
-    font="impact", color="yellow", show=False,
+    "drake",
+    "writing tests",
+    "shipping to prod",
+    font="impact",
+    color="yellow",
+    show=False,
 )
 
 # %%
@@ -25,9 +29,12 @@ memes.meme(
 # ------------------------
 #
 # :func:`~memeplotlib.meme` returns a ``(Figure, Axes)`` tuple, so you can
-# continue to modify the plot.
+# continue to modify the plot — the matplotlib convention.
 
 fig, ax = memes.meme(
-    "distracted", "my project", "new framework", "me",
-    show=False,
+    "buzz",
+    "every API call",
+    "every API call everywhere",
 )
+# fig and ax are real matplotlib objects — annotate, savefig, etc.
+ax.set_title("functional API output", fontsize=14)

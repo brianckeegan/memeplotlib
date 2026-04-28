@@ -3,91 +3,38 @@ API Reference
 
 .. currentmodule:: memeplotlib
 
-Top-level Functions
+Top-level functions
 --------------------
 
 .. autofunction:: meme
 
-**Example output:**
-
-.. image:: _static/examples/api_meme_example.png
-   :alt: meme() example output
-   :width: 400px
-
 .. autofunction:: memify
 
-**Example output:**
+.. autofunction:: rc_context
 
-.. image:: _static/examples/api_memify_example.png
-   :alt: memify() example output
-   :width: 400px
-
-Meme Class
------------
+Classes
+--------
 
 .. autoclass:: Meme
    :members:
-   :undoc-members:
    :show-inheritance:
 
-**Example output:**
-
-.. image:: _static/examples/api_meme_class_example.png
-   :alt: Meme class method chain example
-   :width: 400px
-
-Configuration
---------------
-
-.. autodata:: config
-   :annotation: = MemeplotlibConfig()
-
-.. autoclass:: memeplotlib._config.MemeplotlibConfig
+.. autoclass:: MemeplotlibConfig
    :members:
    :show-inheritance:
-   :no-index:
-
-Templates
-----------
 
 .. autoclass:: Template
    :members:
    :show-inheritance:
-   :exclude-members: id, name, image_url, text_positions, keywords, example
-
-.. autoclass:: memeplotlib._template.TextPosition
-   :members:
-   :show-inheritance:
-   :no-index:
 
 .. autoclass:: TemplateRegistry
    :members:
-   :undoc-members:
    :show-inheritance:
+
+Singletons and exceptions
+--------------------------
+
+.. autodata:: config
+   :annotation: = MemeplotlibConfig()
 
 .. autoexception:: memeplotlib._template.TemplateNotFoundError
-   :show-inheritance:
-
-Rendering
-----------
-
-.. automodule:: memeplotlib._rendering
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Text Utilities
----------------
-
-.. automodule:: memeplotlib._text
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-Caching
---------
-
-.. automodule:: memeplotlib._cache
-   :members:
-   :undoc-members:
-   :show-inheritance:

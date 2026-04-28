@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
 import pytest
 from matplotlib import patheffects
 
@@ -17,7 +17,7 @@ from memeplotlib._rendering import (
     render_meme,
     render_memify,
 )
-from memeplotlib._template import DEFAULT_TEXT_POSITIONS, TextPosition
+from memeplotlib._template import TextPosition
 
 
 class TestResolveFont:
@@ -59,19 +59,17 @@ class TestAutoFontsize:
 class TestAutoFontsizeConfig:
     def test_default_base_size_is_72(self):
         from memeplotlib._config import DEFAULT_FONTSIZE
+
         assert DEFAULT_FONTSIZE == 72.0
 
     def test_config_fontsize_affects_auto_size(self):
-        from memeplotlib._config import config
-        original = config.fontsize
-        try:
-            config.fontsize = 100.0
-            large = _auto_fontsize("hello", 1.0, 0.2, base_size=config.fontsize)
-            config.fontsize = 50.0
-            small = _auto_fontsize("hello", 1.0, 0.2, base_size=config.fontsize)
-            assert large > small
-        finally:
-            config.fontsize = original
+        from memeplotlib._config import config, rc_context
+
+        with rc_context({"fontsize": 100.0}):
+            large = _auto_fontsize("hello", 1.0, 0.2, base_size=config["fontsize"])
+        with rc_context({"fontsize": 50.0}):
+            small = _auto_fontsize("hello", 1.0, 0.2, base_size=config["fontsize"])
+        assert large > small
 
     def test_explicit_fontsize_overrides_auto(self):
         fig, ax = plt.subplots()

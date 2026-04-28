@@ -7,12 +7,11 @@ import json
 import time
 from collections import OrderedDict
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
-from PIL import Image
-
 import platformdirs
+from PIL import Image
 
 
 def _default_cache_dir() -> Path:
@@ -53,8 +52,8 @@ class TemplateCache:
         except PermissionError as e:
             raise PermissionError(
                 f"Cannot create cache directory '{self._cache_dir}': {e}. "
-                f"Set config.cache_dir to a writable path or set "
-                f"config.cache_enabled = False to disable caching."
+                f"Set config['cache_dir'] to a writable path or set "
+                f"config['cache_enabled'] = False to disable caching."
             ) from e
 
     # --- Catalog (template list) ---
@@ -81,7 +80,10 @@ class TemplateCache:
             data = json.loads(catalog_path.read_text())
             if time.time() - data.get("timestamp", 0) > ttl:
                 return None
-            return data.get("templates")
+            templates = data.get("templates")
+            if templates is None:
+                return None
+            return cast("list[dict[str, Any]]", templates)
         except (json.JSONDecodeError, KeyError):
             return None
 

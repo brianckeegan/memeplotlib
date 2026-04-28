@@ -1,11 +1,10 @@
-# Configuration file for the Sphinx documentation builder.
-#
-# For the full list of built-in configuration values, see the documentation:
-# https://www.sphinx-doc.org/en/master/usage/configuration.html
+"""Sphinx configuration for memeplotlib documentation."""
 
+from __future__ import annotations
+
+import json
 import os
 import sys
-import json
 
 # Make sure the source directory is importable for autodoc
 sys.path.insert(0, os.path.abspath("../src"))
@@ -16,7 +15,7 @@ project = "memeplotlib"
 copyright = "2025, Brian Keegan"
 author = "Brian Keegan"
 html_title = "memeplotlib"
-html_logo = "memeplotlib_logo.png"
+html_logo = "_static/logo.png"
 
 
 def _get_release() -> str:
@@ -30,7 +29,7 @@ def _get_release() -> str:
         if release_tag:
             return release_tag
 
-    return os.environ.get("GITHUB_REF_NAME", "0.1.0")
+    return os.environ.get("GITHUB_REF_NAME", "0.2.0")
 
 
 release = _get_release()
@@ -39,33 +38,28 @@ release = _get_release()
 
 extensions = [
     "sphinx.ext.autodoc",
-    "sphinx.ext.napoleon",
+    "sphinx.ext.autosummary",
     "sphinx.ext.intersphinx",
     "sphinx.ext.viewcode",
+    "numpydoc",
     "sphinx_gallery.gen_gallery",
 ]
 
-# Napoleon settings for NumPy-style docstrings
-napoleon_google_docstring = False
-napoleon_numpy_docstring = True
-napoleon_include_init_with_doc = True
-napoleon_include_private_with_doc = False
-napoleon_include_special_with_doc = True
-napoleon_use_admonition_for_examples = False
-napoleon_use_admonition_for_notes = True
-napoleon_use_ivar = False
-napoleon_use_param = True
-napoleon_use_rtype = True
-napoleon_attr_annotations = True
+# numpydoc handles NumPy-format docstrings and renders typed signatures;
+# we don't combine it with napoleon or sphinx-autodoc-typehints.
+numpydoc_show_class_members = False
+numpydoc_class_members_toctree = False
+numpydoc_xref_param_type = True
 
-# Autodoc settings
+# Autodoc + autosummary settings
 autodoc_member_order = "bysource"
-autodoc_typehints = "description"
+autodoc_typehints = "none"  # numpydoc renders types from the docstring
 autodoc_default_options = {
     "members": True,
-    "undoc-members": True,
     "show-inheritance": True,
 }
+autosummary_generate = True
+autosummary_imported_members = False
 
 # -- Sphinx-Gallery configuration -------------------------------------------
 
@@ -81,6 +75,12 @@ sphinx_gallery_conf = {
     "only_warn_on_example_error": True,
 }
 
+# Sphinx-gallery emits a non-fatal warning when an example exits non-zero
+# (for example, a network blip during the live memegen API fetch). The
+# build still succeeds; suppress just the gallery's own warning category
+# so `-W` doesn't elevate transient network issues into fatal errors.
+suppress_warnings = ["sphinx_gallery"]
+
 # Intersphinx links to external projects
 intersphinx_mapping = {
     "python": ("https://docs.python.org/3", None),
@@ -90,16 +90,20 @@ intersphinx_mapping = {
 }
 
 templates_path = ["_templates"]
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "_internal", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 
 html_theme = "pydata_sphinx_theme"
 html_theme_options = {
-    "description": "Memes with Python's matplotlib",
-    "github_user": "brianckeegan",
-    "github_repo": "memeplotlib",
-    "github_banner": False,
-    "fixed_sidebar": True,
+    "icon_links": [
+        {
+            "name": "GitHub",
+            "url": "https://github.com/brianckeegan/memeplotlib",
+            "icon": "fa-brands fa-github",
+        },
+    ],
+    "show_nav_level": 2,
+    "show_toc_level": 2,
 }
 html_static_path = ["_static"]

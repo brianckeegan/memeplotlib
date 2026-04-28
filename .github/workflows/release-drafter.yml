@@ -1,0 +1,25 @@
+name: Release Drafter
+
+# Triggered on pushes to main only. release-drafter expects its config
+# (.github/release-drafter.yml) to exist on the default branch, so PR
+# events would always fail until the config has been merged. The workflow
+# is only useful post-merge anyway — it maintains a draft release that
+# accumulates merged PRs.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  update_release_draft:
+    permissions:
+      contents: write
+      pull-requests: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: release-drafter/release-drafter@v6
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

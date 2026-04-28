@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 
@@ -29,11 +29,12 @@ def meme(
     outline_width: float | None = None,
     fontsize: float | None = None,
     style: str | None = None,
-    show: bool = True,
+    show: bool = False,
     savefig: str | Path | None = None,
     figsize: tuple[float, float] | None = None,
     dpi: int | None = None,
     ax: Axes | None = None,
+    **text_kwargs: Any,
 ) -> tuple[Figure, Axes]:
     """Create a meme from a template with text lines.
 
@@ -63,7 +64,9 @@ def meme(
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``
         (default: ``"upper"``).
     show : bool, optional
-        Whether to call ``plt.show()`` (default: ``True``).
+        Whether to call :func:`matplotlib.pyplot.show` after rendering
+        (default: ``False``). The matplotlib convention is to return the
+        Axes for further customization rather than displaying implicitly.
     savefig : str, Path, or None, optional
         Path to save the meme image to.
     figsize : tuple of (float, float) or None, optional
@@ -71,20 +74,29 @@ def meme(
     dpi : int or None, optional
         Dots per inch (default: 150).
     ax : Axes or None, optional
-        Existing matplotlib Axes to render onto.
+        Existing matplotlib Axes to render onto. If ``None``, a new figure
+        and axes are created.
+    **text_kwargs
+        Additional keyword arguments forwarded to :meth:`Axes.text` for each
+        rendered caption (e.g. ``alpha``, ``rotation``). User values take
+        precedence over the meme-specific defaults.
 
     Returns
     -------
-    tuple of (Figure, Axes)
-        The matplotlib Figure and Axes for further customization.
+    fig : matplotlib.figure.Figure
+        The matplotlib Figure containing the rendered meme.
+    ax : matplotlib.axes.Axes
+        The matplotlib Axes containing the rendered meme.
 
     Examples
     --------
     >>> import memeplotlib as memes
-    >>> memes.meme("buzz", "memes", "memes everywhere")  # doctest: +SKIP
+    >>> fig, ax = memes.meme("buzz", "memes", "memes everywhere")  # doctest: +SKIP
 
-    >>> memes.meme("drake", "writing tests", "shipping to prod",
-    ...            font="impact", color="yellow", show=False)  # doctest: +SKIP
+    >>> fig, ax = memes.meme(  # doctest: +SKIP
+    ...     "drake", "writing tests", "shipping to prod",
+    ...     font="impact", color="yellow",
+    ... )
     """
     tmpl = _resolve_template(template)
 
@@ -101,12 +113,13 @@ def meme(
         fontsize=fontsize,
         style=style,
         cache=_cache,
+        **text_kwargs,
     )
 
     if savefig is not None:
         fig.savefig(
             str(savefig),
-            dpi=dpi or config.dpi,
+            dpi=dpi if dpi is not None else config["dpi"],
             bbox_inches="tight",
             pad_inches=0,
         )
@@ -127,8 +140,9 @@ def memify(
     outline_width: float | None = None,
     fontsize: float | None = None,
     style: str | None = None,
-    show: bool = True,
+    show: bool = False,
     savefig: str | Path | None = None,
+    **text_kwargs: Any,
 ) -> Figure:
     """Add meme-style text to an existing matplotlib figure.
 
@@ -137,7 +151,7 @@ def memify(
 
     Parameters
     ----------
-    fig : Figure
+    fig : matplotlib.figure.Figure
         The matplotlib figure to add text to.
     *lines : str
         Text lines to overlay.
@@ -157,13 +171,17 @@ def memify(
     style : str or None, optional
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
     show : bool, optional
-        Whether to call ``plt.show()``.
+        Whether to call :func:`matplotlib.pyplot.show` after rendering
+        (default: ``False``).
     savefig : str, Path, or None, optional
         Path to save the result to.
+    **text_kwargs
+        Additional keyword arguments forwarded to :meth:`Axes.text` for each
+        rendered caption.
 
     Returns
     -------
-    Figure
+    matplotlib.figure.Figure
         The modified Figure.
 
     Examples
@@ -184,12 +202,13 @@ def memify(
         outline_width=outline_width,
         fontsize=fontsize,
         style=style,
+        **text_kwargs,
     )
 
     if savefig is not None:
         result.savefig(
             str(savefig),
-            dpi=config.dpi,
+            dpi=config["dpi"],
             bbox_inches="tight",
             pad_inches=0,
         )

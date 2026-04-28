@@ -14,8 +14,13 @@ Control font, color, outline, and case style for meme text.
 import memeplotlib as memes
 
 memes.meme(
-    "drake", "writing tests", "shipping to prod",
-    font="impact", color="yellow", style="upper", show=False,
+    "drake",
+    "writing tests",
+    "shipping to prod",
+    font="impact",
+    color="yellow",
+    style="upper",
+    show=False,
 )
 
 # %%
@@ -25,8 +30,11 @@ memes.meme(
 # Use ``fontsize`` to set the text size in points.
 
 memes.meme(
-    "buzz", "big text", "big memes",
-    fontsize=120, show=False,
+    "buzz",
+    "big text",
+    "big memes",
+    fontsize=120,
+    show=False,
 )
 
 # %%
@@ -36,7 +44,11 @@ memes.meme(
 # Adjust ``outline_color`` and ``outline_width`` for the classic meme look.
 
 memes.meme(
-    "buzz", "white on black", "the classic",
-    color="white", outline_color="black", outline_width=3.0,
+    "buzz",
+    "white on black",
+    "the classic",
+    color="white",
+    outline_color="black",
+    outline_width=3.0,
     show=False,
 )

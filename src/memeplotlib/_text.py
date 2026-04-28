@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import textwrap
 
-
 # memegen URL encoding table
 _ENCODE_MAP = [
     ("_", "__"),
@@ -172,8 +171,7 @@ def apply_style(text: str, style: str) -> str:
     """
     if style not in _VALID_STYLES:
         raise ValueError(
-            f"Invalid style {style!r}. Must be one of: "
-            f"{', '.join(sorted(_VALID_STYLES))}"
+            f"Invalid style {style!r}. Must be one of: " f"{', '.join(sorted(_VALID_STYLES))}"
         )
     if style == "upper":
         return text.upper()

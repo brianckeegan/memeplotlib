@@ -1,0 +1,77 @@
+# Draft recipe for submission to conda-forge/staged-recipes after the
+# first PyPI release of v0.2.0 lands. To submit:
+#
+# 1. Wait for v0.2.0 to be published on PyPI.
+# 2. Compute the sdist sha256:
+#    curl -fsSL https://pypi.org/packages/source/m/memeplotlib/memeplotlib-0.2.0.tar.gz | sha256sum
+# 3. Replace REPLACE_AT_SUBMIT_TIME below with that hash.
+# 4. Open a PR against https://github.com/conda-forge/staged-recipes
+#    placing this file at recipes/memeplotlib/meta.yaml.
+#
+# The existing conda-recipe/ directory in this repo is for the
+# *brianckeegan* user channel published by .github/workflows/publish_conda.yml.
+# Once conda-forge accepts the package, the user-channel publish can be
+# retired in favor of conda-forge/feedstocks/memeplotlib-feedstock.
+
+{% set name = "memeplotlib" %}
+{% set version = "0.2.0" %}
+
+package:
+  name: {{ name|lower }}
+  version: {{ version }}
+
+source:
+  url: https://pypi.org/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz
+  sha256: REPLACE_AT_SUBMIT_TIME
+
+build:
+  noarch: python
+  script: {{ PYTHON }} -m pip install . -vv --no-deps --no-build-isolation
+  number: 0
+  entry_points:
+    - memeplotlib = memeplotlib.__main__:main
+
+requirements:
+  host:
+    - python {{ python_min }}
+    - pip
+    - hatchling
+  run:
+    - python >={{ python_min }}
+    - matplotlib-base >=3.8.0
+    - numpy >=1.16.0
+    - pillow >=8.0.0
+    - platformdirs >=2.0.0
+    - requests >=2.20.0
+
+test:
+  imports:
+    - memeplotlib
+  commands:
+    - pip check
+    - memeplotlib --help
+  requires:
+    - pip
+    - python {{ python_min }}
+
+about:
+  home: https://github.com/brianckeegan/memeplotlib
+  summary: Memes with Python's matplotlib.
+  description: |
+    memeplotlib creates image-macro memes using matplotlib for
+    rendering and the memegen API for template discovery. It exposes a
+    functional API (``memes.meme``), an object-oriented chainable
+    builder (``Meme``), and a ``memify`` helper that turns any
+    matplotlib figure into a meme. Conventions match the scientific
+    Python stack: ``ax=None`` rendering, ``(fig, ax)`` returns,
+    ``rc_context``-style scoped overrides, and ``**kwargs`` forwarding
+    to ``Axes.text``.
+  license: MIT
+  license_family: MIT
+  license_file: LICENSE
+  doc_url: https://brianckeegan.github.io/memeplotlib/
+  dev_url: https://github.com/brianckeegan/memeplotlib
+
+extra:
+  recipe-maintainers:
+    - brianckeegan
