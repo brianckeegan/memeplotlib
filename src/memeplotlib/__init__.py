@@ -16,7 +16,7 @@ from memeplotlib._config import MemeplotlibConfig, config, rc_context
 from memeplotlib._meme import Meme
 from memeplotlib._template import Template, TemplateRegistry
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Meme",
