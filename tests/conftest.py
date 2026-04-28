@@ -48,3 +48,23 @@ def _close_figures():
     """Close all matplotlib figures after each test to prevent memory leaks."""
     yield
     plt.close("all")
+
+
+@pytest.fixture(autouse=True)
+def _block_real_network(request):
+    """Block any real socket use to keep the suite offline-only.
+
+    Tests that legitimately need a TCP socket (pytest-httpserver) opt out
+    via ``@pytest.mark.allow_network``. The ``responses`` library installs
+    an HTTP transport adapter that does not open real sockets, so existing
+    HTTP-mocked tests are unaffected.
+    """
+    if request.node.get_closest_marker("allow_network"):
+        yield
+        return
+    pytest_socket = pytest.importorskip("pytest_socket")
+    pytest_socket.disable_socket(allow_unix_socket=True)
+    try:
+        yield
+    finally:
+        pytest_socket.enable_socket()

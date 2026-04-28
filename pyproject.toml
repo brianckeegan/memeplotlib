@@ -103,6 +103,7 @@ markers = [
     "slow: marks tests as slow (require network)",
     "integration: marks integration tests",
     "mpl_image_compare: pytest-mpl image comparison test",
+    "allow_network: opt out of the offline-only autouse fixture",
 ]
 
 [tool.coverage.run]
