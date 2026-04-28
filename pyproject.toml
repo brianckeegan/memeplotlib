@@ -99,10 +99,12 @@ exclude = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--strict-markers"
+# Skip integration / slow tests by default — they hit the live memegen API.
+# Run them explicitly with: `pytest -m 'integration or slow'`.
+addopts = "--strict-markers -m 'not integration and not slow'"
 markers = [
     "slow: marks tests as slow (require network)",
-    "integration: marks integration tests",
+    "integration: marks integration tests (require network)",
     "mpl_image_compare: pytest-mpl image comparison test",
     "allow_network: opt out of the offline-only autouse fixture",
 ]

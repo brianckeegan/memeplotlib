@@ -2,6 +2,13 @@
 
 Run ``pytest --mpl`` to compare against committed baselines, or
 ``pytest --mpl-generate-path=tests/baseline`` to regenerate them.
+
+All tests pass ``font="Anton"`` explicitly. Anton is the bundled font
+that ships with the package, so every platform — macOS dev (which has
+Impact installed) and Linux/Windows CI (which don't) — renders with the
+same glyph shapes. Without this, baselines generated on macOS with
+Impact diverge from CI's Anton renderings by ~36-48 RMS, far past any
+reasonable tolerance.
 """
 
 from __future__ import annotations
@@ -16,6 +23,9 @@ from PIL import Image  # noqa: E402
 
 from memeplotlib import meme, memify  # noqa: E402
 
+_TOLERANCE = 30  # generous because text rasterization still varies slightly
+_BUNDLED_FONT = "Anton"
+
 
 @pytest.fixture
 def local_template(tmp_path):
@@ -28,22 +38,22 @@ def local_template(tmp_path):
     return str(path)
 
 
-@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=20)
+@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=_TOLERANCE)
 def test_meme_local_template(local_template):
-    fig, _ = meme(local_template, "TOP CAPTION", "BOTTOM CAPTION")
+    fig, _ = meme(local_template, "TOP CAPTION", "BOTTOM CAPTION", font=_BUNDLED_FONT)
     return fig
 
 
-@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=20)
+@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=_TOLERANCE)
 def test_meme_custom_color(local_template):
-    fig, _ = meme(local_template, "yellow", color="yellow")
+    fig, _ = meme(local_template, "yellow", color="yellow", font=_BUNDLED_FONT)
     return fig
 
 
-@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=20)
+@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=_TOLERANCE)
 def test_memify_overlay():
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot([0, 1, 2, 3], [0, 1, 4, 9], lw=3)
     ax.set_facecolor("white")
-    memify(fig, "STONKS", "STILL GOING UP")
+    memify(fig, "STONKS", "STILL GOING UP", font=_BUNDLED_FONT)
     return fig
