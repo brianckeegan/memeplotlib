@@ -6,34 +6,53 @@ import argparse
 import sys
 from typing import Any
 
+from memeplotlib import __version__
+
 
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="memeplotlib",
         description="Create memes from the command line using matplotlib.",
     )
+    parser.add_argument("--version", action="version", version=f"memeplotlib {__version__}")
     sub = parser.add_subparsers(dest="command")
 
-    # list
-    sub.add_parser("list", help="List all available meme templates")
+    sub.add_parser("list", help="List all available meme templates.")
 
-    # search
-    sp_search = sub.add_parser("search", help="Search templates by keyword")
-    sp_search.add_argument("query", help="Search term")
+    sp_search = sub.add_parser("search", help="Search templates by keyword.")
+    sp_search.add_argument("query", help="Search term.")
 
-    # info
-    sp_info = sub.add_parser("info", help="Show details for a template")
-    sp_info.add_argument("template_id", help="Template ID (e.g. 'buzz', 'drake')")
+    sp_info = sub.add_parser("info", help="Show details for a template.")
+    sp_info.add_argument("template_id", help="Template ID (e.g. 'buzz', 'drake').")
 
-    # create
-    sp_create = sub.add_parser("create", help="Create a meme and save to file")
-    sp_create.add_argument("template", help="Template ID, image path, or URL")
-    sp_create.add_argument("lines", nargs="+", help="Text lines (top, bottom, ...)")
-    sp_create.add_argument(
-        "-o", "--output", default="meme.png", help="Output file path (default: meme.png)"
-    )
-    sp_create.add_argument("--font", default=None, help="Font family name")
-    sp_create.add_argument("--style", default=None, help="Text style: upper, lower, none")
+    # 'meme' (canonical) and 'create' (alias for backward compatibility)
+    for name, help_text in (
+        ("meme", "Render a meme and save it to a file."),
+        ("create", "Alias for 'meme'."),
+    ):
+        sp = sub.add_parser(name, help=help_text)
+        sp.add_argument("template", help="Template ID, image path, or URL.")
+        sp.add_argument("lines", nargs="*", help="Caption text lines (top, bottom, ...).")
+        sp.add_argument(
+            "-o",
+            "--out",
+            "--output",
+            dest="out",
+            default="meme.png",
+            help="Output file path (default: meme.png).",
+        )
+        sp.add_argument("--font", default=None, help="Font family name.")
+        sp.add_argument(
+            "--color", default=None, help="Caption text color (any matplotlib color spec)."
+        )
+        sp.add_argument(
+            "--style",
+            default=None,
+            choices=["upper", "lower", "none"],
+            help="Caption text transform.",
+        )
+        sp.add_argument("--fontsize", type=float, default=None, help="Font size in points.")
+        sp.add_argument("--dpi", type=int, default=None, help="DPI for the rendered output.")
 
     return parser
 
@@ -48,12 +67,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "list":
         return _cmd_list()
-    elif args.command == "search":
+    if args.command == "search":
         return _cmd_search(args.query)
-    elif args.command == "info":
+    if args.command == "info":
         return _cmd_info(args.template_id)
-    elif args.command == "create":
-        return _cmd_create(args)
+    if args.command in ("meme", "create"):
+        return _cmd_meme(args)
 
     return 0
 
@@ -110,21 +129,21 @@ def _cmd_info(template_id: str) -> int:
     return 0
 
 
-def _cmd_create(args: argparse.Namespace) -> int:
+def _cmd_meme(args: argparse.Namespace) -> int:
     import matplotlib
 
     matplotlib.use("Agg")
 
     from memeplotlib._api import meme
 
-    kwargs: dict[str, Any] = {"show": False, "savefig": args.output}
-    if args.font:
-        kwargs["font"] = args.font
-    if args.style:
-        kwargs["style"] = args.style
+    kwargs: dict[str, Any] = {"show": False, "savefig": args.out}
+    for key in ("font", "color", "style", "fontsize", "dpi"):
+        value = getattr(args, key, None)
+        if value is not None:
+            kwargs[key] = value
 
     meme(args.template, *args.lines, **kwargs)
-    print(f"Saved to {args.output}")
+    print(f"Saved to {args.out}")
     return 0
 
 

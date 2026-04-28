@@ -129,7 +129,7 @@ class TestInfo:
         assert "not found" in out
 
 
-class TestCreate:
+class TestMemeRender:
     @staticmethod
     def _mock_buzz(fake_image_bytes):
         # The CLI calls meme() → _resolve_template() → registry.get().
@@ -155,31 +155,53 @@ class TestCreate:
         )
 
     @responses.activate
-    def test_create_saves_png(self, fake_image_bytes, tmp_path, capsys):
+    def test_meme_subcommand_saves_png(self, fake_image_bytes, tmp_path, capsys):
         self._mock_buzz(fake_image_bytes)
         out_path = tmp_path / "out.png"
-        rc = main(["create", "buzz", "hello", "world", "-o", str(out_path)])
+        rc = main(["meme", "buzz", "hello", "world", "--out", str(out_path)])
         assert rc == 0
         assert out_path.exists()
         captured = capsys.readouterr().out
         assert f"Saved to {out_path}" in captured
 
     @responses.activate
-    def test_create_with_font_and_style(self, fake_image_bytes, tmp_path):
+    def test_create_alias_still_works(self, fake_image_bytes, tmp_path):
+        """Backward-compat: 'create' is an alias for 'meme'."""
+        self._mock_buzz(fake_image_bytes)
+        out_path = tmp_path / "alias.png"
+        rc = main(["create", "buzz", "hello", "world", "-o", str(out_path)])
+        assert rc == 0
+        assert out_path.exists()
+
+    @responses.activate
+    def test_meme_with_font_and_style(self, fake_image_bytes, tmp_path):
         self._mock_buzz(fake_image_bytes)
         out_path = tmp_path / "styled.png"
         rc = main(
             [
-                "create",
+                "meme",
                 "buzz",
                 "hello",
                 "--font",
                 "impact",
                 "--style",
                 "none",
+                "--fontsize",
+                "60",
                 "-o",
                 str(out_path),
             ]
         )
         assert rc == 0
         assert out_path.exists()
+
+
+class TestVersionFlag:
+    def test_version_prints(self, capsys):
+        from memeplotlib import __version__
+
+        with pytest.raises(SystemExit) as excinfo:
+            main(["--version"])
+        assert excinfo.value.code == 0
+        out = capsys.readouterr().out
+        assert __version__ in out
