@@ -12,6 +12,8 @@ Top-level functions
 
 .. autofunction:: rc_context
 
+.. autofunction:: build_memegen_url
+
 Classes
 --------
 
@@ -28,6 +30,10 @@ Classes
    :show-inheritance:
 
 .. autoclass:: TemplateRegistry
+   :members:
+   :show-inheritance:
+
+.. autoclass:: OverlaySpec
    :members:
    :show-inheritance:
 

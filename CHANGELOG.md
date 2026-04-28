@@ -4,6 +4,95 @@ All notable changes to memeplotlib are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] — 2026-04-28
+
+This release rewires the rendering pipeline around the memegen API. By
+default, memes are now composed **server-side** by memegen and fetched as a
+finished image; a new client-side **Pillow** backend handles custom local
+images and any feature the API can't express (per-line `fontsize`, custom
+outlines, ``**text_kwargs``, per-line overrides). The legacy
+matplotlib-text rendering is preserved as `backend="matplotlib"` for
+explicit opt-in.
+
+### Breaking
+
+- **Default rendering pipeline changed.** `meme()` calls now hit
+  `https://api.memegen.link/images/<id>/<line_1>/.../<line_n>.<ext>?...`
+  and `imshow` the response — output appearance, fonts, and stroke shape
+  may differ from v0.2 / v0.4 baselines. To preserve exact previous
+  behaviour, pass `backend="matplotlib"` or set
+  `config["backend"] = "matplotlib"`.
+- **memegen never honours custom outlines or per-line `fontsize`.** Under
+  `backend="auto"`, passing `outline_color`, `outline_width`, `fontsize`,
+  any `**text_kwargs`, or per-line overrides routes to the Pillow
+  backend automatically. Under `backend="memegen"` they are silently
+  ignored.
+- **Image baselines under `tests/baseline/` were regenerated.** Local
+  forks pinning the old baselines should regenerate after upgrading.
+
+### Added
+
+- **memegen URL builder.** New public function
+  `memeplotlib.build_memegen_url(template_id, lines, *, api_base, ...)` —
+  see [docs/url_construction.rst](docs/url_construction.rst) for the full
+  grammar (escape table, query parameters, font / style / overlay
+  reference). Adapted from
+  [jacebrowning/memegen#993](https://github.com/jacebrowning/memegen/issues/993).
+- **`backend` parameter** on `meme()` and `Meme`. Values: `"auto"`
+  (default), `"memegen"`, `"pillow"`, `"matplotlib"`. Also a
+  `Meme.with_backend(...)` chainable setter.
+- **memegen knobs on `meme()`**: `template_style`, `extension`, `width`,
+  `height`, `layout`, `background`, `overlays`. Mirrors of the same
+  query parameters memegen accepts.
+- **Per-line overrides** via `Meme.line(index, text, *, fontsize=None,
+  color=None, font=None, position=None)`. Using any override forces the
+  Pillow backend.
+- **Pillow backend** (`memeplotlib._pillow.render_pillow`) with
+  TTF resolution from the bundled Anton font and standard system font
+  paths, multiline shrink-to-fit via `ImageDraw.textbbox`, and
+  stroke-aware caption drawing.
+- **Template metadata fields**: `lines_count`, `overlays_count`,
+  `styles`, `is_memegen`. The CLI `info` subcommand now surfaces all
+  three.
+- **CLI flags**: `--backend`, `--ext`, `--width`, `--height`, `--layout`,
+  `--background`, `--template-style` on the `meme` / `create`
+  subcommand.
+- **MCP `meme` tool** accepts `backend`, `extension`, `width`, `height`,
+  `template_style`, `font`, `color`, `fontsize`.
+- **Config keys**: `backend`, `extension`, `width`, `height`, `layout`,
+  `background`. Validated by `_VALIDATORS` like every existing key.
+- **`OverlaySpec` `TypedDict`** for ad-hoc overlay placements
+  (`{style, center, scale}`).
+- **`memegen_rendered_pattern(template_id)` test helper** in
+  `tests/conftest.py` for regex-mocking the dynamic rendered URLs.
+- **`uses_default_backend` pytest marker** for tests that opt out of
+  the legacy-matplotlib autouse fixture.
+
+### Fixed
+
+- **`Template.get_image()` now respects `config["cache_enabled"]`.**
+  Previously it always consulted the cache instance regardless of the
+  setting — tests that disabled caching via config could still read
+  stale data from the user's real cache directory.
+
+### Migration
+
+```python
+# Before (v0.4): matplotlib drew the captions client-side.
+memes.meme("buzz", "memes", "memes everywhere")
+
+# After (v0.5): memegen renders server-side by default.
+# Pin the old behaviour with backend="matplotlib":
+memes.meme("buzz", "memes", "memes everywhere", backend="matplotlib")
+
+# Or globally:
+memes.config["backend"] = "matplotlib"
+
+# Existing fontsize / outline knobs still work — under backend="auto",
+# they transparently route through the Pillow backend instead:
+memes.meme("buzz", "hello", fontsize=48, outline_color="red")
+```
+
 ## [0.2.0] — 2026-04-28
 
 This release modernizes the public API to match scientific-Python

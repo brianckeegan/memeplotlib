@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import matplotlib
 import numpy as np
 import pytest
@@ -10,6 +12,44 @@ matplotlib.use("Agg")  # Non-interactive backend for testing
 import matplotlib.pyplot as plt  # noqa: E402
 
 from memeplotlib._template import DEFAULT_TEXT_POSITIONS, Template  # noqa: E402
+
+
+# Tests that pre-date the v0.5.0 backend split assume the old blank-image-
+# fetch + matplotlib draw flow. Force ``backend="matplotlib"`` for those
+# legacy tests via a config snapshot fixture; new tests for the memegen
+# and pillow backends opt in explicitly with ``backend=...``.
+@pytest.fixture(autouse=True)
+def _legacy_matplotlib_backend(request):
+    """Default tests to the legacy matplotlib backend.
+
+    Tests opt out by adding ``@pytest.mark.uses_default_backend``; in that
+    case ``config["backend"]`` is left at its default (``"auto"``) so the
+    test exercises the new dispatcher.
+    """
+    from memeplotlib import config
+
+    if request.node.get_closest_marker("uses_default_backend"):
+        yield
+        return
+
+    original = config["backend"]
+    config["backend"] = "matplotlib"
+    try:
+        yield
+    finally:
+        config["backend"] = original
+
+
+def memegen_rendered_pattern(template_id: str = ".+") -> re.Pattern[str]:
+    """Regex matching any memegen rendered URL for *template_id*.
+
+    Useful with ``responses.add(..., url=memegen_rendered_pattern("buzz"))``
+    when a test exercises the memegen backend and the exact URL depends on
+    the caption text or query parameters.
+    """
+    return re.compile(
+        rf"https://api\.memegen\.link/images/{template_id}/[^?]+\.(png|jpg|gif|webp)(\?.*)?"
+    )
 
 
 @pytest.fixture

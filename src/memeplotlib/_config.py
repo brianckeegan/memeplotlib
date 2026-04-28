@@ -31,10 +31,14 @@ DEFAULT_API_TIMEOUT = 10
 DEFAULT_IMAGE_TIMEOUT = 15
 DEFAULT_MAX_RETRIES = 2
 DEFAULT_RETRY_BACKOFF = 0.5
+DEFAULT_BACKEND = "auto"
+DEFAULT_EXTENSION = "png"
 
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg", ".gif", ".bmp", ".tiff", ".webp"}
 
 _VALID_STYLES = {"upper", "lower", "none"}
+_VALID_BACKENDS = {"auto", "memegen", "pillow", "matplotlib"}
+_VALID_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 
 
 def _check_str(name: str) -> Callable[[Any], str]:
@@ -79,6 +83,28 @@ def _check_non_negative_int(name: str) -> Callable[[Any], int]:
     return validator
 
 
+def _check_optional_non_negative_int(name: str) -> Callable[[Any], int | None]:
+    def validator(v: Any) -> int | None:
+        if v is None:
+            return None
+        if isinstance(v, bool) or not isinstance(v, int):
+            raise ValueError(f"{name!r} must be an int or None, got {type(v).__name__}")
+        if v < 0:
+            raise ValueError(f"{name!r} must be non-negative, got {v}")
+        return int(v)
+
+    return validator
+
+
+def _check_choice(name: str, choices: set[str]) -> Callable[[Any], str]:
+    def validator(v: Any) -> str:
+        if v not in choices:
+            raise ValueError(f"{name!r} must be one of {sorted(choices)}, got {v!r}")
+        return str(v)
+
+    return validator
+
+
 def _check_style(name: str) -> Callable[[Any], str]:
     def validator(v: Any) -> str:
         if v not in _VALID_STYLES:
@@ -112,6 +138,12 @@ _VALIDATORS: dict[str, Callable[[Any], Any]] = {
     "image_timeout": _check_non_negative_int("image_timeout"),
     "max_retries": _check_non_negative_int("max_retries"),
     "retry_backoff": _check_non_negative_float("retry_backoff"),
+    "backend": _check_choice("backend", _VALID_BACKENDS),
+    "extension": _check_choice("extension", _VALID_EXTENSIONS),
+    "width": _check_optional_non_negative_int("width"),
+    "height": _check_optional_non_negative_int("height"),
+    "layout": _check_optional_str("layout"),
+    "background": _check_optional_str("background"),
 }
 
 
@@ -130,6 +162,12 @@ _DEFAULTS: dict[str, Any] = {
     "image_timeout": DEFAULT_IMAGE_TIMEOUT,
     "max_retries": DEFAULT_MAX_RETRIES,
     "retry_backoff": DEFAULT_RETRY_BACKOFF,
+    "backend": DEFAULT_BACKEND,
+    "extension": DEFAULT_EXTENSION,
+    "width": None,
+    "height": None,
+    "layout": None,
+    "background": None,
 }
 
 

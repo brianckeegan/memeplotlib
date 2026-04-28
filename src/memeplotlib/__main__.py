@@ -53,6 +53,37 @@ def _build_parser() -> argparse.ArgumentParser:
         )
         sp.add_argument("--fontsize", type=float, default=None, help="Font size in points.")
         sp.add_argument("--dpi", type=int, default=None, help="DPI for the rendered output.")
+        sp.add_argument(
+            "--backend",
+            default=None,
+            choices=["auto", "memegen", "pillow", "matplotlib"],
+            help="Rendering backend (default: 'auto').",
+        )
+        sp.add_argument(
+            "--ext",
+            dest="extension",
+            default=None,
+            choices=["png", "jpg", "jpeg", "gif", "webp"],
+            help="Output format requested from memegen (default: png).",
+        )
+        sp.add_argument(
+            "--width", type=int, default=None, help="Output width in pixels (memegen)."
+        )
+        sp.add_argument(
+            "--height", type=int, default=None, help="Output height in pixels (memegen)."
+        )
+        sp.add_argument("--layout", default=None, help="Memegen layout (e.g. 'top').")
+        sp.add_argument(
+            "--background",
+            default=None,
+            help="Custom background URL forwarded to memegen.",
+        )
+        sp.add_argument(
+            "--template-style",
+            dest="template_style",
+            default=None,
+            help="Memegen template-specific style (e.g. 'maga').",
+        )
 
     return parser
 
@@ -122,7 +153,9 @@ def _cmd_info(template_id: str) -> int:
     print(f"ID:       {tmpl.id}")
     print(f"Name:     {tmpl.name}")
     print(f"URL:      {tmpl.image_url}")
-    print(f"Lines:    {len(tmpl.text_positions)}")
+    print(f"Lines:    {tmpl.lines_count}")
+    print(f"Overlays: {tmpl.overlays_count}")
+    print(f"Styles:   {', '.join(tmpl.styles) or '(default)'}")
     print(f"Keywords: {', '.join(tmpl.keywords) or '(none)'}")
     if tmpl.example:
         print(f"Example:  {' / '.join(tmpl.example)}")
@@ -137,7 +170,20 @@ def _cmd_meme(args: argparse.Namespace) -> int:
     from memeplotlib._api import meme
 
     kwargs: dict[str, Any] = {"show": False, "savefig": args.out}
-    for key in ("font", "color", "style", "fontsize", "dpi"):
+    for key in (
+        "font",
+        "color",
+        "style",
+        "fontsize",
+        "dpi",
+        "backend",
+        "extension",
+        "width",
+        "height",
+        "layout",
+        "background",
+        "template_style",
+    ):
         value = getattr(args, key, None)
         if value is not None:
             kwargs[key] = value

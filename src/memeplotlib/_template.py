@@ -97,6 +97,20 @@ class Template:
         Search keywords associated with the template.
     example : list of str, optional
         Example text lines for the template.
+    lines_count : int, optional
+        Maximum number of caption slots the template supports (mirrors
+        the memegen ``lines`` field). Defaults to ``2``.
+    overlays_count : int, optional
+        Number of template-defined overlay slots (mirrors the memegen
+        ``overlays`` field). Defaults to ``0``.
+    styles : list of str, optional
+        Template-specific style names (mirrors the memegen ``styles``
+        field). Defaults to ``[]``.
+    is_memegen : bool, optional
+        ``True`` if this template was constructed from memegen API
+        metadata; ``False`` for custom local files / arbitrary URLs.
+        Used by the rendering dispatcher to decide whether the memegen
+        backend is even reachable.
     """
 
     id: str
@@ -107,6 +121,10 @@ class Template:
     )
     keywords: list[str] = field(default_factory=list)
     example: list[str] = field(default_factory=list)
+    lines_count: int = 2
+    overlays_count: int = 0
+    styles: list[str] = field(default_factory=list)
+    is_memegen: bool = False
 
     def __post_init__(self) -> None:
         # Lazy-loaded image cache; not a public dataclass field.
@@ -168,6 +186,13 @@ class Template:
             lines_count = max(1, int(data.get("lines", 2)))
         except (TypeError, ValueError):
             lines_count = 2
+        try:
+            overlays_count = max(0, int(data.get("overlays", 0)))
+        except (TypeError, ValueError):
+            overlays_count = 0
+        styles_raw = data.get("styles", []) or []
+        styles = [str(s) for s in styles_raw if isinstance(s, str)]
+
         if lines_count <= 2:
             text_positions = list(DEFAULT_TEXT_POSITIONS)
         else:
@@ -191,6 +216,10 @@ class Template:
             text_positions=text_positions,
             keywords=keywords,
             example=example_lines,
+            lines_count=lines_count,
+            overlays_count=overlays_count,
+            styles=styles,
+            is_memegen=True,
         )
 
     @classmethod
@@ -252,6 +281,8 @@ class Template:
             name=name or template_id,
             image_url=image_url,
             text_positions=text_positions,
+            lines_count=lines,
+            is_memegen=False,
         )
 
     def get_image(self, cache: TemplateCache | None = None) -> np.ndarray:
@@ -272,8 +303,10 @@ class Template:
         if self._image_array is not None:
             return self._image_array
 
+        cache_enabled = bool(config["cache_enabled"])
+
         # Check cache
-        if cache is not None:
+        if cache is not None and cache_enabled:
             cached = cache.get_image(self.image_url)
             if cached is not None:
                 self._image_array = cached
@@ -287,7 +320,7 @@ class Template:
             img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
 
             # Cache the downloaded image
-            if cache is not None:
+            if cache is not None and cache_enabled:
                 cache.set_image(self.image_url, image_bytes)
         else:
             img = Image.open(self.image_url).convert("RGBA")
