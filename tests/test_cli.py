@@ -205,3 +205,31 @@ class TestVersionFlag:
         assert excinfo.value.code == 0
         out = capsys.readouterr().out
         assert __version__ in out
+
+
+class TestOutlineFlags:
+    def test_outline_flags_are_forwarded(self, monkeypatch, tmp_path):
+        import memeplotlib._api as api
+
+        captured: dict = {}
+
+        def fake_meme(template, *lines, **kwargs):
+            captured.update(kwargs)
+
+        monkeypatch.setattr(api, "meme", fake_meme)
+        rc = main(
+            [
+                "meme",
+                "buzz",
+                "a",
+                "--outline-color",
+                "white",
+                "--outline-width",
+                "3",
+                "-o",
+                str(tmp_path / "x.png"),
+            ]
+        )
+        assert rc == 0
+        assert captured["outline_color"] == "white"
+        assert captured["outline_width"] == 3.0
