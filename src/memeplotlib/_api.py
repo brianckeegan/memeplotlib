@@ -90,7 +90,10 @@ def meme(
         Explicit font size in points. Forces the Pillow backend under
         ``backend="auto"`` (memegen always auto-fits).
     style : str, optional
-        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
+        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``. memegen
+        applies each template's own casing (usually upper), so under
+        ``backend="auto"`` anything but ``"upper"`` selects the Pillow
+        backend.
     backend : str, optional
         ``"auto"`` (default), ``"memegen"``, ``"pillow"``, or
         ``"matplotlib"`` (legacy, draws captions with

@@ -666,6 +666,7 @@ def render_meme(
         force_pillow=force_pillow,
         text_kwargs=text_kwargs,
         per_line_overrides=per_line_overrides,
+        style=style_val,
     )
 
     if chosen == "memegen":
@@ -730,9 +731,20 @@ def _select_backend(
     force_pillow: bool,
     text_kwargs: dict[str, Any],
     per_line_overrides: dict[int, dict[str, object]] | None,
+    style: str = "upper",
 ) -> str:
     """Resolve ``backend="auto"`` to a concrete backend name."""
     if requested != "auto":
+        if requested == "memegen" and style != "upper":
+            # memegen re-applies each template line's own casing (mostly
+            # upper) after our transform; there is no query parameter for it.
+            warnings.warn(
+                f"style={style!r} may have no effect on backend='memegen': "
+                f"memegen applies each template's own text casing. Use "
+                f"backend='pillow' (or 'auto') to control it.",
+                UserWarning,
+                stacklevel=3,
+            )
         if requested not in {"memegen", "pillow", "matplotlib"}:
             raise ValueError(
                 f"Unknown backend {requested!r}. Must be one of: "
@@ -767,6 +779,9 @@ def _select_backend(
     if per_line_overrides:
         return "pillow"
     if memegen_font_for(font) is None:
+        return "pillow"
+    if style != "upper":
+        # memegen would re-uppercase most templates' captions.
         return "pillow"
     return "memegen"
 
