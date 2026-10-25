@@ -26,6 +26,13 @@ from memeplotlib import meme, memify  # noqa: E402
 _TOLERANCE = 30  # generous because text rasterization still varies slightly
 _BUNDLED_FONT = "Anton"
 
+# matplotlib 3.11 measures text extents differently, so auto-fit captions
+# come out slightly smaller than on earlier releases -- beyond _TOLERANCE.
+# Python 3.10 can't install 3.11, so CI exercises both; keep one baseline
+# set per behavior. Regenerate the legacy set under matplotlib < 3.11 with
+# ``pytest --mpl-generate-path=tests/baseline/mpl-pre-3.11``.
+_BASELINE_DIR = "baseline" if matplotlib.__version_info__ >= (3, 11) else "baseline/mpl-pre-3.11"
+
 
 @pytest.fixture
 def local_template(tmp_path):
@@ -38,19 +45,19 @@ def local_template(tmp_path):
     return str(path)
 
 
-@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=_TOLERANCE)
+@pytest.mark.mpl_image_compare(baseline_dir=_BASELINE_DIR, tolerance=_TOLERANCE)
 def test_meme_local_template(local_template):
     fig, _ = meme(local_template, "TOP CAPTION", "BOTTOM CAPTION", font=_BUNDLED_FONT)
     return fig
 
 
-@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=_TOLERANCE)
+@pytest.mark.mpl_image_compare(baseline_dir=_BASELINE_DIR, tolerance=_TOLERANCE)
 def test_meme_custom_color(local_template):
     fig, _ = meme(local_template, "yellow", color="yellow", font=_BUNDLED_FONT)
     return fig
 
 
-@pytest.mark.mpl_image_compare(baseline_dir="baseline", tolerance=_TOLERANCE)
+@pytest.mark.mpl_image_compare(baseline_dir=_BASELINE_DIR, tolerance=_TOLERANCE)
 def test_memify_overlay():
     fig, ax = plt.subplots(figsize=(6, 4))
     ax.plot([0, 1, 2, 3], [0, 1, 4, 9], lw=3)
