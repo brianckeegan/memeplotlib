@@ -103,6 +103,21 @@ def _close_figures():
 
 
 @pytest.fixture(autouse=True)
+def _no_system_proxy_lookup(monkeypatch):
+    """Keep requests from consulting the OS proxy configuration.
+
+    On macOS, ``urllib.request.proxy_bypass`` falls back to the system
+    proxy settings, whose exception list makes it call
+    ``socket.gethostbyname`` -- before ``responses`` intercepts the request,
+    so the socket block below rejects it. Any proxy-related environment
+    variable sends urllib down the environment path instead, and
+    ``NO_PROXY=*`` also guarantees no proxy is used for mocked requests.
+    """
+    monkeypatch.setenv("NO_PROXY", "*")
+    monkeypatch.setenv("no_proxy", "*")
+
+
+@pytest.fixture(autouse=True)
 def _block_real_network(request):
     """Block any real socket use to keep the suite offline-only.
 
