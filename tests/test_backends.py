@@ -264,3 +264,19 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestMemegenBackground:
+    @responses.activate
+    def test_background_renders_via_custom_template(self, buzz_metadata_response, fake_png_bytes):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("custom"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", "b", backend="memegen", background="https://example.com/bg.png")
+        rendered = [
+            str(c.request.url) for c in responses.calls if "/images/custom/" in c.request.url
+        ]
+        assert rendered and "background=https://example.com/bg.png" in rendered[0]

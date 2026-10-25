@@ -452,8 +452,12 @@ def _render_via_memegen(
     transformed = [apply_style(line, style) if line else line for line in lines]
 
     memegen_font = memegen_font_for(font)
+    # memegen only honours `background=` on its "custom" template; on any
+    # other ID it is silently ignored. A background replaces the template
+    # image, so render it via "custom".
+    template_id = "custom" if background else template.id
     url = build_memegen_url(
-        template.id,
+        template_id,
         transformed,
         api_base=config["api_base"],
         extension=extension,
