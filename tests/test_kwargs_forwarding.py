@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import pytest  # noqa: E402
 
 from memeplotlib._rendering import render_meme, render_memify  # noqa: E402
 
@@ -38,3 +39,11 @@ class TestRenderMemifyKwargs:
         render_memify(fig, ["sideways"], rotation=45)
         overlay_ax = fig.axes[-1]
         assert overlay_ax.texts[0].get_rotation() == 45
+
+
+@pytest.mark.uses_default_backend
+class TestAutoRoutesTextKwargs:
+    def test_rotation_applied_under_auto(self, sample_template):
+        # Previously auto routed to Pillow, which silently dropped rotation.
+        fig, ax = render_meme(sample_template, ["hello"], rotation=15)
+        assert ax.texts and ax.texts[0].get_rotation() == 15

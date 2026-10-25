@@ -12,6 +12,8 @@ Top-level functions
 
 .. autofunction:: rc_context
 
+.. autofunction:: get_alt_text
+
 .. autofunction:: build_memegen_url
 
 Classes
@@ -37,10 +39,14 @@ Classes
    :members:
    :show-inheritance:
 
+.. autoclass:: TextPosition
+   :members:
+   :show-inheritance:
+
 Singletons and exceptions
 --------------------------
 
 .. autodata:: config
    :annotation: = MemeplotlibConfig()
 
-.. autoexception:: memeplotlib._template.TemplateNotFoundError
+.. autoexception:: TemplateNotFoundError

@@ -7,6 +7,7 @@ import time
 
 import numpy as np
 import pytest
+import responses
 from PIL import Image
 
 from memeplotlib._cache import TemplateCache
@@ -139,3 +140,90 @@ class TestCorruptImageHandling:
 
         result = cache.get_image("https://example.com/corrupt.png")
         assert result is None
+
+
+class TestSharedDefaultCache:
+    def test_meme_api_meme_class_and_registry_share_one_cache(self, sample_template):
+        from memeplotlib import Meme, TemplateRegistry
+        from memeplotlib._api import _cache as api_cache
+        from memeplotlib._cache import default_cache
+
+        shared = default_cache()
+        assert api_cache is shared
+        assert Meme(sample_template)._cache is shared
+        assert TemplateRegistry()._cache is shared
+
+    def test_explicit_registry_cache_is_respected(self, tmp_path):
+        from memeplotlib import TemplateRegistry
+
+        own = TemplateCache(cache_dir=tmp_path)
+        assert TemplateRegistry(cache=own)._cache is own
+
+
+class TestSingleDecode:
+    def test_set_image_returns_decoded_array(self, cache, sample_png_bytes):
+        arr = cache.set_image("https://example.com/a.png", sample_png_bytes)
+        assert arr is not None and arr.shape[-1] == 4
+
+    def test_set_image_returns_none_for_garbage(self, cache):
+        assert cache.set_image("https://example.com/bad.png", b"not an image") is None
+
+    @responses.activate
+    def test_template_download_is_decoded_once(self, cache, sample_png_bytes, mocker):
+        from PIL import Image
+
+        from memeplotlib import Template, config
+
+        mocker.patch.dict(config._data, {"cache_enabled": True})
+        url = "https://example.com/blank.png"
+        responses.add(responses.GET, url, body=sample_png_bytes, content_type="image/png")
+        spy = mocker.spy(Image, "open")
+        Template(id="t", name="t", image_url=url).get_image(cache=cache)
+        assert spy.call_count == 1
+
+
+class TestConfigCacheDir:
+    """``config["cache_dir"]`` must control where an implicit cache writes."""
+
+    def test_config_cache_dir_is_used(self, tmp_path, monkeypatch):
+        from memeplotlib import config
+
+        monkeypatch.setitem(config, "cache_dir", str(tmp_path / "from_config"))
+        cache = TemplateCache()
+        cache.set_catalog([{"id": "x"}])
+        assert (tmp_path / "from_config" / "catalog.json").exists()
+
+    def test_config_change_after_construction_is_honored(self, tmp_path, monkeypatch):
+        # memeplotlib._api builds its cache at import time, so the directory
+        # has to be resolved lazily.
+        from memeplotlib import config
+
+        cache = TemplateCache()
+        monkeypatch.setitem(config, "cache_dir", str(tmp_path / "later"))
+        cache.set_image("https://example.com/a.png", _png_bytes())
+        assert list((tmp_path / "later" / "images").iterdir())
+
+    def test_explicit_dir_wins_over_config(self, tmp_path, monkeypatch):
+        from memeplotlib import config
+
+        monkeypatch.setitem(config, "cache_dir", str(tmp_path / "from_config"))
+        cache = TemplateCache(cache_dir=tmp_path / "explicit")
+        cache.set_catalog([])
+        assert (tmp_path / "explicit" / "catalog.json").exists()
+        assert not (tmp_path / "from_config").exists()
+
+    def test_none_falls_back_to_platform_default(self, monkeypatch):
+        from memeplotlib import _cache, config
+
+        monkeypatch.setitem(config, "cache_dir", None)
+        assert TemplateCache()._cache_dir == _cache._default_cache_dir()
+
+
+def _png_bytes() -> bytes:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGBA", (2, 2)).save(buf, format="PNG")
+    return buf.getvalue()

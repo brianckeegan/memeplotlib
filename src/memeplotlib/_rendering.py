@@ -13,8 +13,10 @@ Three backends share a single dispatcher (:func:`render_meme`):
 - ``"matplotlib"`` — legacy path, draws captions with ``Axes.text`` plus
   ``patheffects.Stroke``. Kept for backwards compatibility.
 
-The dispatcher's ``"auto"`` policy picks ``"memegen"`` for memegen
-templates with no client-only knobs and ``"pillow"`` otherwise.
+The dispatcher's ``"auto"`` policy picks ``"matplotlib"`` when ``Axes.text``
+keyword arguments are passed (it is the only backend that can apply them),
+``"memegen"`` for memegen templates with no client-only knobs, and
+``"pillow"`` otherwise.
 """
 
 from __future__ import annotations
@@ -431,12 +433,13 @@ def _fetch_rendered_image(url: str, cache: TemplateCache | None) -> np.ndarray:
     resp = _get_session().get(url, timeout=config["image_timeout"])
     resp.raise_for_status()
     image_bytes = resp.content
-    img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
     if cache is not None and config["cache_enabled"]:
-        cache.set_image(url, image_bytes)
+        decoded = cache.set_image(url, image_bytes)
+        if decoded is not None:
+            return decoded
 
-    return img
+    return np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
 
 def _render_via_memegen(
@@ -590,9 +593,10 @@ def render_meme(
 ) -> tuple[Figure, Axes]:
     """Render a meme using the configured backend.
 
-    The ``"auto"`` backend selects ``"memegen"`` when the template originates
-    from the memegen catalog and the user requested no client-only feature;
-    otherwise ``"pillow"``. Pass ``backend="matplotlib"`` for the legacy
+    The ``"auto"`` backend selects ``"matplotlib"`` when ``text_kwargs`` are
+    given, ``"memegen"`` when the template originates from the memegen
+    catalog and the user requested no client-only feature, and ``"pillow"``
+    otherwise. Pass ``backend="matplotlib"`` for the legacy
     ``Axes.text`` rendering retained for backwards compatibility.
 
     Parameters
@@ -640,7 +644,9 @@ def render_meme(
         Per-line ``{font, color, fontsize, position}`` overrides for the
         Pillow renderer.
     **text_kwargs
-        Forwarded to :meth:`Axes.text` (matplotlib backend only).
+        Forwarded to :meth:`Axes.text` (matplotlib backend only). Under
+        ``"auto"`` they select the matplotlib backend; under an explicit
+        ``"memegen"`` or ``"pillow"`` they are ignored with a warning.
 
     Returns
     -------
@@ -672,6 +678,7 @@ def render_meme(
         force_pillow=force_pillow,
         text_kwargs=text_kwargs,
         per_line_overrides=per_line_overrides,
+        style=style_val,
     )
 
     capacity = template.lines_count if chosen == "memegen" else len(template.text_positions)
@@ -739,13 +746,32 @@ def _select_backend(
     force_pillow: bool,
     text_kwargs: dict[str, Any],
     per_line_overrides: dict[int, dict[str, object]] | None,
+    style: str = "upper",
 ) -> str:
     """Resolve ``backend="auto"`` to a concrete backend name."""
     if requested != "auto":
+        if requested == "memegen" and style != "upper":
+            # memegen re-applies each template line's own casing (mostly
+            # upper) after our transform; there is no query parameter for it.
+            warnings.warn(
+                f"style={style!r} may have no effect on backend='memegen': "
+                f"memegen applies each template's own text casing. Use "
+                f"backend='pillow' (or 'auto') to control it.",
+                UserWarning,
+                stacklevel=3,
+            )
         if requested not in {"memegen", "pillow", "matplotlib"}:
             raise ValueError(
                 f"Unknown backend {requested!r}. Must be one of: "
                 f"'auto', 'memegen', 'pillow', 'matplotlib'."
+            )
+        if text_kwargs and requested in {"memegen", "pillow"}:
+            warnings.warn(
+                f"Axes.text keyword arguments {sorted(text_kwargs)} are ignored by "
+                f"backend={requested!r}; use backend='matplotlib' (or 'auto') "
+                f"to apply them.",
+                UserWarning,
+                stacklevel=3,
             )
         if requested == "memegen" and not template.is_memegen:
             warnings.warn(
@@ -757,15 +783,20 @@ def _select_backend(
             return "pillow"
         return requested
 
+    # Only the matplotlib backend draws with Axes.text, so it is the only
+    # one that can honour arbitrary text kwargs (rotation, alpha, ...).
+    if text_kwargs:
+        return "matplotlib"
     if force_pillow:
         return "pillow"
     if not template.is_memegen:
         return "pillow"
     if per_line_overrides:
         return "pillow"
-    if text_kwargs:
-        return "pillow"
     if memegen_font_for(font) is None:
+        return "pillow"
+    if style != "upper":
+        # memegen would re-uppercase most templates' captions.
         return "pillow"
     return "memegen"
 
