@@ -19,17 +19,12 @@ from __future__ import annotations
 
 import textwrap
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 from memeplotlib._template import TextPosition
 from memeplotlib._text import apply_style
-
-if TYPE_CHECKING:
-    pass
-
 
 _FONTS_DIR = Path(__file__).parent / "fonts"
 

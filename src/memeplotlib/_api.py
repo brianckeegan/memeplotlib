@@ -78,8 +78,11 @@ def meme(
         Outline stroke width. Passing a non-default value under
         ``backend="auto"`` forces the Pillow backend.
     fontsize : float, optional
-        Explicit font size in points. Forces the Pillow backend under
-        ``backend="auto"`` (memegen always auto-fits).
+        Explicit font size. Forces the Pillow backend under
+        ``backend="auto"`` (memegen always auto-fits). Units depend on the
+        backend: points under ``"matplotlib"``; under ``"pillow"``, pixels
+        at the template image's native resolution, used as a maximum
+        (captions still shrink to fit their box).
     style : str, optional
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
     backend : str, optional
@@ -88,18 +91,18 @@ def meme(
         :meth:`matplotlib.axes.Axes.text`).
     extension : str, optional
         Output format requested from memegen -- ``"png"``, ``"jpg"``,
-        ``"gif"``, or ``"webp"``.
+        ``"gif"``, or ``"webp"``. memegen backend only.
     width, height : int, optional
-        Output dimensions for memegen-rendered images.
+        Output dimensions in pixels. memegen backend only.
     layout : str, optional
-        memegen layout (e.g. ``"top"``).
+        memegen layout (e.g. ``"top"``). memegen backend only.
     background : str, optional
-        Custom background image URL for memegen.
-    overlays : sequence of dict, optional
-        Ad-hoc overlay placements forwarded to memegen as repeated
-        ``style=`` / ``center=`` / ``scale=`` query params.
+        Custom background image URL. memegen backend only.
+    overlays : sequence of OverlaySpec, optional
+        Ad-hoc overlay image placements. memegen backend only.
     template_style : str, optional
         memegen template-specific style (e.g. ``"maga"`` for ``"ds"``).
+        memegen backend only.
     show : bool, optional
         Whether to call :func:`matplotlib.pyplot.show` after rendering.
     savefig : str, Path, or None, optional
@@ -121,6 +124,17 @@ def meme(
         The matplotlib Figure containing the rendered meme.
     ax : matplotlib.axes.Axes
         The matplotlib Axes containing the rendered meme.
+
+    Raises
+    ------
+    TemplateNotFoundError
+        If *template* looks like a memegen ID but memegen doesn't know it.
+    FileNotFoundError
+        If *template* looks like a file path but the file doesn't exist.
+    ValueError
+        If ``backend``, ``style``, or ``extension`` is not a valid choice.
+    requests.HTTPError
+        If memegen or an image URL returns an error status.
 
     Examples
     --------

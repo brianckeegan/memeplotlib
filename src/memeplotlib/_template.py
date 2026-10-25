@@ -56,10 +56,12 @@ class TextPosition:
     align : str
         Horizontal text alignment (``"center"``, ``"left"``, ``"right"``).
     style : str
-        Default text style for this position (``"upper"``, ``"lower"``,
-        ``"none"``).
+        Reserved: default text style for this position (``"upper"``,
+        ``"lower"``, ``"none"``). Not currently applied by any renderer;
+        use the ``style`` argument instead.
     angle : float
-        Text rotation angle in degrees.
+        Reserved: text rotation angle in degrees. Not currently applied
+        by any renderer.
     """
 
     anchor_x: float = 0.0
