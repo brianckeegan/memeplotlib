@@ -30,6 +30,8 @@ import matplotlib
 # Force the Agg backend before any matplotlib import touches a GUI loop.
 matplotlib.use("Agg")
 
+import matplotlib.pyplot as plt  # noqa: E402
+
 try:
     from mcp.server.fastmcp import FastMCP
 except ImportError as exc:  # pragma: no cover - exercised only without [mcp] extra
@@ -140,7 +142,14 @@ def render_meme_tool(
     if fontsize is not None:
         kwargs["fontsize"] = fontsize
 
-    _meme(template, *lines, **kwargs)
+    # The server is long-lived and pyplot keeps a reference to every figure
+    # it creates, so release whatever this call opened -- even on error.
+    open_before = set(plt.get_fignums())
+    try:
+        _meme(template, *lines, **kwargs)
+    finally:
+        for num in set(plt.get_fignums()) - open_before:
+            plt.close(num)
     return {"path": out_path, "base64_png": _encode_png(out_path)}
 
 
