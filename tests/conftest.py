@@ -84,6 +84,16 @@ def sample_template(sample_image) -> Template:
 
 
 @pytest.fixture(autouse=True)
+def _fresh_shared_cache_memory():
+    """Empty the shared in-memory image LRU so tests can't see each other's images."""
+    from memeplotlib._cache import default_cache
+
+    default_cache()._memory.clear()
+    yield
+    default_cache()._memory.clear()
+
+
+@pytest.fixture(autouse=True)
 def _close_figures():
     """Close all matplotlib figures after each test to prevent memory leaks."""
     yield

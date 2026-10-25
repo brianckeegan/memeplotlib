@@ -419,12 +419,13 @@ def _fetch_rendered_image(url: str, cache: TemplateCache | None) -> np.ndarray:
     resp = _get_session().get(url, timeout=config["image_timeout"])
     resp.raise_for_status()
     image_bytes = resp.content
-    img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
     if cache is not None and config["cache_enabled"]:
-        cache.set_image(url, image_bytes)
+        decoded = cache.set_image(url, image_bytes)
+        if decoded is not None:
+            return decoded
 
-    return img
+    return np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
 
 def _render_via_memegen(

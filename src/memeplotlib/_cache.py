@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import threading
 import time
 from collections import OrderedDict
 from pathlib import Path
@@ -139,7 +141,7 @@ class TemplateCache:
 
         return None
 
-    def set_image(self, url: str, image_bytes: bytes) -> None:
+    def set_image(self, url: str, image_bytes: bytes) -> np.ndarray | None:
         """Cache template image to disk and memory.
 
         Parameters
@@ -148,6 +150,13 @@ class TemplateCache:
             The image URL used as the cache key.
         image_bytes : bytes
             Raw image file bytes to store.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            The decoded RGBA array (decoded once, from memory), or ``None``
+            if the bytes are not a readable image. Callers should use it
+            rather than decoding *image_bytes* a second time.
         """
         self._ensure_dirs()
         key = self._image_key(url)
@@ -156,12 +165,13 @@ class TemplateCache:
         disk_path = self._images_dir / f"{key}.png"
         disk_path.write_bytes(image_bytes)
 
-        # Load into memory as numpy array
+        # Decode from the bytes already in memory, not by re-reading the file.
         try:
-            img = np.array(Image.open(disk_path).convert("RGBA"))
-            self._memory_put(key, img)
+            img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
         except (OSError, Image.DecompressionBombError):
-            pass
+            return None
+        self._memory_put(key, img)
+        return img
 
     def _memory_put(self, key: str, value: np.ndarray) -> None:
         """Add to in-memory LRU cache, evicting oldest if at capacity."""
@@ -179,3 +189,22 @@ class TemplateCache:
             import shutil
 
             shutil.rmtree(self._cache_dir)
+
+
+_default_cache: TemplateCache | None = None
+_default_cache_lock = threading.Lock()
+
+
+def default_cache() -> TemplateCache:
+    """Return the process-wide cache shared by ``meme()``, ``Meme``, and registries.
+
+    Sharing one instance means the in-memory LRU actually serves repeat
+    renders (e.g. a loop of ``Meme("buzz", ...)`` calls) instead of each
+    object re-reading and re-decoding images from disk.
+    """
+    global _default_cache
+    if _default_cache is None:
+        with _default_cache_lock:
+            if _default_cache is None:
+                _default_cache = TemplateCache()
+    return _default_cache

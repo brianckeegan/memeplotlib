@@ -14,7 +14,7 @@ from PIL import Image
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-from memeplotlib._cache import TemplateCache
+from memeplotlib._cache import TemplateCache, default_cache
 from memeplotlib._config import IMAGE_EXTENSIONS, config
 
 
@@ -317,15 +317,17 @@ class Template:
             resp = _get_session().get(self.image_url, timeout=config["image_timeout"])
             resp.raise_for_status()
             image_bytes = resp.content
-            img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
 
-            # Cache the downloaded image
+            # Cache the download; set_image hands back the decoded array.
+            decoded = None
             if cache is not None and cache_enabled:
-                cache.set_image(self.image_url, image_bytes)
+                decoded = cache.set_image(self.image_url, image_bytes)
+            if decoded is None:
+                decoded = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
+            self._image_array = decoded
         else:
-            img = Image.open(self.image_url).convert("RGBA")
+            self._image_array = np.array(Image.open(self.image_url).convert("RGBA"))
 
-        self._image_array = np.array(img)
         return self._image_array
 
 
@@ -337,7 +339,8 @@ class TemplateRegistry:
     api_base : str or None, optional
         Base URL for the memegen API. Uses ``config["api_base"]`` if ``None``.
     cache : TemplateCache or None, optional
-        Cache instance for storing template metadata.
+        Cache instance for storing template metadata. Defaults to the
+        process-wide shared cache.
 
     Examples
     --------
@@ -352,7 +355,7 @@ class TemplateRegistry:
         cache: TemplateCache | None = None,
     ):
         self._api_base = api_base or config["api_base"]
-        self._cache = cache or TemplateCache()
+        self._cache = cache or default_cache()
         self._catalog: list[dict[str, Any]] | None = None
 
     def _fetch_catalog(self) -> list[dict[str, Any]]:

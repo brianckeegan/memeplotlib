@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 
-from memeplotlib._cache import TemplateCache
+from memeplotlib._cache import default_cache
 from memeplotlib._config import config
 from memeplotlib._rendering import render_meme, render_memify
 from memeplotlib._template import _resolve_template
@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 
-_cache = TemplateCache()
+_cache = default_cache()
 
 
 # Sentinel used to detect whether the caller explicitly supplied a value.
