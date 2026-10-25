@@ -19,6 +19,7 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
 | `_url.py` | memegen URL builder: `build_memegen_url`, `OverlaySpec`, `MEMEGEN_FONT_ALIASES`, `memegen_font_for`. |
 | `_rendering.py` | Three-backend dispatcher (`render_meme` / `render_memify`): server-side memegen URL fetch, Pillow client-side draw, and the legacy matplotlib `Axes.text` path. Backend auto-selection lives in `_select_backend`. |
 | `_pillow.py` | Pillow renderer: TTF resolution, multiline shrink-to-fit via `ImageDraw.textbbox`, stroke-aware caption drawing. |
+| `_alt.py` | Alt text: generated descriptions for `meme`/`memify`/`Meme`, `get_alt_text`, and savefig metadata (PNG/SVG `Description`, PDF `Subject`). |
 | `_text.py` | Text styling helpers (`upper`/`lower`/`none`) and memegen URL encoding (`encode_text_for_url`). |
 | `_config.py` | RcParams-style `MemeplotlibConfig` mapping + `rc_context` context manager. |
 | `_cache.py` | Two-level cache: in-memory LRU + disk cache via `platformdirs`. Caches both blanks and memegen-rendered URLs (keyed by URL hash). |

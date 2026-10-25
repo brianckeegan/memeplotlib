@@ -163,6 +163,18 @@ class TestMemeRender:
         assert out_path.exists()
         captured = capsys.readouterr().out
         assert f"Saved to {out_path}" in captured
+        assert 'Alt text: Meme using the "Buzz" template. Top text: "hello".' in captured
+
+    @responses.activate
+    def test_meme_alt_text_flag(self, fake_image_bytes, tmp_path, capsys):
+        from PIL import Image
+
+        self._mock_buzz(fake_image_bytes)
+        out_path = tmp_path / "out.png"
+        rc = main(["meme", "buzz", "hi", "--alt-text", "Custom words", "--out", str(out_path)])
+        assert rc == 0
+        assert "Alt text: Custom words" in capsys.readouterr().out
+        assert Image.open(out_path).info["Description"] == "Custom words"
 
     @responses.activate
     def test_create_alias_still_works(self, fake_image_bytes, tmp_path):
@@ -214,7 +226,10 @@ class TestOutlineFlags:
         captured: dict = {}
 
         def fake_meme(template, *lines, **kwargs):
+            import matplotlib.pyplot as plt
+
             captured.update(kwargs)
+            return plt.subplots()
 
         monkeypatch.setattr(api, "meme", fake_meme)
         rc = main(

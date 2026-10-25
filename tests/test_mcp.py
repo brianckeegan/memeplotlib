@@ -82,6 +82,7 @@ class TestRenderMemeTool:
         assert isinstance(result["base64_png"], str)
         assert len(result["base64_png"]) > 100  # non-trivial content
         assert out.exists()
+        assert result["alt_text"].startswith('Meme using the "Buzz" template.')
 
     @responses.activate
     def test_render_without_out_path_uses_tempfile(self, fake_png_bytes):
@@ -162,6 +163,9 @@ class TestRenderMemeToolForwarding:
             calls.append((args, kwargs))
             # The tool base64-encodes the saved file, so write a real PNG.
             Image.new("RGB", (4, 4)).save(kwargs["savefig"])
+            import matplotlib.pyplot as plt
+
+            return plt.subplots()
 
         monkeypatch.setattr(_mcp, "_meme", fake_meme)
         return calls
