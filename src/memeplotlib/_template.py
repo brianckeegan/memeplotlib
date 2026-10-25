@@ -17,9 +17,26 @@ from urllib3.util.retry import Retry
 from memeplotlib._cache import TemplateCache
 from memeplotlib._config import IMAGE_EXTENSIONS, config
 
+_session_local = threading.local()
+
 
 def _get_session() -> requests.Session:
-    """Create a requests session with retry logic from config."""
+    """Return this thread's requests session, with retry logic from config.
+
+    Sessions are reused so consecutive requests share pooled connections
+    (no fresh TCP + TLS handshake per request). One session is kept per
+    thread because ``requests.Session`` is not documented as thread-safe,
+    and it is rebuilt whenever the retry settings in ``config`` change.
+    """
+    key = (config["max_retries"], config["retry_backoff"])
+    cached: tuple[tuple[int, float], requests.Session] | None = getattr(
+        _session_local, "entry", None
+    )
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    if cached is not None:
+        cached[1].close()
+
     session = requests.Session()
     retry = Retry(
         total=config["max_retries"],
@@ -29,6 +46,7 @@ def _get_session() -> requests.Session:
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
+    _session_local.entry = (key, session)
     return session
 
 

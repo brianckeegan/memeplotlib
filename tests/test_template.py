@@ -259,6 +259,35 @@ class TestResolveTemplate:
         assert t.id == "buzz"
 
 
+class TestSessionReuse:
+    def test_same_session_is_reused(self):
+        from memeplotlib._template import _get_session
+
+        assert _get_session() is _get_session()
+
+    def test_retry_config_change_rebuilds_session(self, monkeypatch):
+        from memeplotlib import config
+        from memeplotlib._template import _get_session
+
+        first = _get_session()
+        monkeypatch.setitem(config, "max_retries", config["max_retries"] + 1)
+        second = _get_session()
+        assert second is not first
+        assert second.get_adapter("https://x").max_retries.total == config["max_retries"]
+
+    def test_threads_get_their_own_session(self):
+        import threading
+
+        from memeplotlib._template import _get_session
+
+        main = _get_session()
+        seen = []
+        t = threading.Thread(target=lambda: seen.append(_get_session()))
+        t.start()
+        t.join()
+        assert seen[0] is not main
+
+
 class TestStylesFilter:
     def test_config_artifacts_are_dropped(self):
         tmpl = Template._from_api_data(
