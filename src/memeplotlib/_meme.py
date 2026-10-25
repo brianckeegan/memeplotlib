@@ -196,11 +196,14 @@ class Meme:
         color: str | None = None,
         font: str | None = None,
         position: TextPosition | None = None,
+        outline_color: str | None = None,
+        outline_width: float | None = None,
+        style: str | None = None,
     ) -> Meme:
         """Set text and per-line styling overrides for a single slot.
 
-        Passing any of ``fontsize``, ``color``, ``font``, or ``position``
-        forces the Pillow backend on render (memegen has no equivalent).
+        Passing any styling override forces the Pillow backend on render
+        (memegen has no per-line equivalent).
 
         Parameters
         ----------
@@ -216,6 +219,14 @@ class Meme:
             Override font family for this slot.
         position : TextPosition, optional
             Override the text-box position metadata for this slot.
+        outline_color : str, optional
+            Override the outline colour for this slot (e.g. a white outline
+            for a caption over a dark region).
+        outline_width : float, optional
+            Override the outline width for this slot.
+        style : str, optional
+            Override the text transform for this slot -- ``"upper"``,
+            ``"lower"``, or ``"none"``.
 
         Returns
         -------
@@ -232,6 +243,12 @@ class Meme:
             override["font"] = font
         if position is not None:
             override["position"] = position
+        if outline_color is not None:
+            override["outline_color"] = outline_color
+        if outline_width is not None:
+            override["outline_width"] = outline_width
+        if style is not None:
+            override["style"] = style
         if override:
             self._per_line_overrides[index] = override
         self._invalidate()
