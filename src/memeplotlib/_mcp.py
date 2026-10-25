@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import os
+import sys
 import tempfile
 from typing import Any
 
@@ -182,7 +183,9 @@ def list_templates_tool() -> list[dict[str, str]]:
 
 def main() -> int:
     """Console-script entry point."""
-    print(f"memeplotlib-mcp {__version__} (stdio JSON-RPC)", flush=True)
+    # stdout is the JSON-RPC channel on the stdio transport; anything else
+    # written there corrupts the stream, so diagnostics go to stderr.
+    print(f"memeplotlib-mcp {__version__} (stdio JSON-RPC)", file=sys.stderr, flush=True)
     server.run()
     return 0
 

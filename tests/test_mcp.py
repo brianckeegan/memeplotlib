@@ -47,6 +47,15 @@ class TestServerSurface:
         # confirm the entry point exists with the expected signature.
         assert callable(_mcp.main)
 
+    def test_main_keeps_stdout_clean(self, monkeypatch, capsys):
+        # stdout carries JSON-RPC on the stdio transport; a banner there
+        # breaks the client handshake.
+        monkeypatch.setattr(_mcp.server, "run", lambda *a, **k: None)
+        assert _mcp.main() == 0
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "memeplotlib-mcp" in captured.err
+
 
 class TestRenderMemeTool:
     @responses.activate
