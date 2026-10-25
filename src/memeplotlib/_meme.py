@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any
 import matplotlib.pyplot as plt
 
 from memeplotlib._alt import default_meme_alt_text, savefig_metadata, set_alt_text
-from memeplotlib._cache import TemplateCache
+from memeplotlib._cache import default_cache
 from memeplotlib._config import config
 from memeplotlib._rendering import render_meme
 from memeplotlib._template import Template, TextPosition, _resolve_template
@@ -114,7 +114,7 @@ class Meme:
         self._per_line_overrides: dict[int, dict[str, object]] = {}
         self._fig: Figure | None = None
         self._ax: Axes | None = None
-        self._cache = TemplateCache()
+        self._cache = default_cache()
 
     def _get_template(self) -> Template:
         if self._template is None:

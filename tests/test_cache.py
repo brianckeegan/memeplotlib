@@ -7,6 +7,7 @@ import time
 
 import numpy as np
 import pytest
+import responses
 from PIL import Image
 
 from memeplotlib._cache import TemplateCache
@@ -139,6 +140,46 @@ class TestCorruptImageHandling:
 
         result = cache.get_image("https://example.com/corrupt.png")
         assert result is None
+
+
+class TestSharedDefaultCache:
+    def test_meme_api_meme_class_and_registry_share_one_cache(self, sample_template):
+        from memeplotlib import Meme, TemplateRegistry
+        from memeplotlib._api import _cache as api_cache
+        from memeplotlib._cache import default_cache
+
+        shared = default_cache()
+        assert api_cache is shared
+        assert Meme(sample_template)._cache is shared
+        assert TemplateRegistry()._cache is shared
+
+    def test_explicit_registry_cache_is_respected(self, tmp_path):
+        from memeplotlib import TemplateRegistry
+
+        own = TemplateCache(cache_dir=tmp_path)
+        assert TemplateRegistry(cache=own)._cache is own
+
+
+class TestSingleDecode:
+    def test_set_image_returns_decoded_array(self, cache, sample_png_bytes):
+        arr = cache.set_image("https://example.com/a.png", sample_png_bytes)
+        assert arr is not None and arr.shape[-1] == 4
+
+    def test_set_image_returns_none_for_garbage(self, cache):
+        assert cache.set_image("https://example.com/bad.png", b"not an image") is None
+
+    @responses.activate
+    def test_template_download_is_decoded_once(self, cache, sample_png_bytes, mocker):
+        from PIL import Image
+
+        from memeplotlib import Template, config
+
+        mocker.patch.dict(config._data, {"cache_enabled": True})
+        url = "https://example.com/blank.png"
+        responses.add(responses.GET, url, body=sample_png_bytes, content_type="image/png")
+        spy = mocker.spy(Image, "open")
+        Template(id="t", name="t", image_url=url).get_image(cache=cache)
+        assert spy.call_count == 1
 
 
 class TestConfigCacheDir:
