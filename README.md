@@ -123,8 +123,10 @@ picks the best fit; pass `backend="..."` to override.
 - **`memegen`** — when the template comes from the memegen catalogue and the
   caller didn't pass `fontsize`, a non-default `outline_color` /
   `outline_width`, `**text_kwargs`, or per-line overrides.
+- **`matplotlib`** — when `**text_kwargs` (e.g. `rotation`, `alpha`) are
+  passed, since only `Axes.text` can apply them.
 - **`pillow`** — for custom local images / arbitrary URLs, or when any of
-  the above client-only features were requested.
+  the other client-only features above were requested.
 
 ```python
 # Default: memegen renders this server-side.
@@ -139,8 +141,8 @@ memes.meme("/path/to/photo.jpg", "top", "bottom", fontsize=48,
 from memeplotlib import Meme
 Meme("buzz").top("hi").line(1, "world", fontsize=72, color="yellow").save("out.png")
 
-# Legacy matplotlib path (preserves old behaviour exactly):
-memes.meme("buzz", "rotated", rotation=15, alpha=0.8, backend="matplotlib")
+# Axes.text kwargs select the matplotlib path automatically:
+memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
 ```
 
 See [`docs/url_construction.rst`](docs/url_construction.rst) for the full

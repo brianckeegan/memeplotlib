@@ -65,8 +65,9 @@ def meme(
     The default ``backend="auto"`` selects the memegen rendering API for
     memegen-catalogue templates, and falls back to a Pillow client-side
     renderer for custom local images or whenever the user supplies a
-    feature memegen can't express (per-line ``fontsize``, custom outline,
-    ``Axes.text`` kwargs).
+    feature memegen can't express (explicit ``fontsize`` or a custom
+    outline). Extra ``Axes.text`` kwargs select the matplotlib renderer,
+    the only one that can apply them.
 
     Parameters
     ----------
@@ -125,9 +126,10 @@ def meme(
     ax : Axes or None, optional
         Existing matplotlib Axes to render onto.
     **text_kwargs
-        Additional keyword arguments forwarded to :meth:`Axes.text` under
-        the ``"matplotlib"`` and ``"pillow"`` backends. Passing any
-        ``text_kwargs`` under ``backend="auto"`` forces the Pillow backend.
+        Additional keyword arguments forwarded to :meth:`Axes.text`. Only
+        the ``"matplotlib"`` backend applies them, so passing any under
+        ``backend="auto"`` selects it; an explicit ``"memegen"`` or
+        ``"pillow"`` backend ignores them with a ``UserWarning``.
 
     Returns
     -------
@@ -167,8 +169,9 @@ def meme(
     eff_style = style if style is not _UNSET else None
 
     # Force the pillow path when memegen can't honour the request:
-    # explicit fontsize, non-default outline, or extra Axes.text kwargs.
-    force_pillow = bool(user_fontsize or user_outline_color or user_outline_width or text_kwargs)
+    # explicit fontsize or non-default outline. (Extra Axes.text kwargs are
+    # routed to the matplotlib backend by the dispatcher instead.)
+    force_pillow = bool(user_fontsize or user_outline_color or user_outline_width)
 
     backend_val = backend if backend is not None else config["backend"]
 

@@ -151,16 +151,44 @@ class TestBackendSelection:
         )
         assert chosen == "pillow"
 
-    def test_auto_picks_pillow_with_text_kwargs(self):
+    @pytest.mark.parametrize("is_memegen", [True, False])
+    @pytest.mark.parametrize("force_pillow", [True, False])
+    def test_auto_picks_matplotlib_with_text_kwargs(self, is_memegen, force_pillow):
+        # Only the matplotlib backend draws with Axes.text, so it wins even
+        # when other knobs would otherwise pick Pillow.
         chosen = _select_backend(
             "auto",
-            self._tmpl(is_memegen=True),
+            self._tmpl(is_memegen=is_memegen),
             font="impact",
-            force_pillow=False,
+            force_pillow=force_pillow,
             text_kwargs={"alpha": 0.5},
             per_line_overrides=None,
         )
-        assert chosen == "pillow"
+        assert chosen == "matplotlib"
+
+    @pytest.mark.parametrize("backend", ["memegen", "pillow"])
+    def test_explicit_backend_warns_about_ignored_text_kwargs(self, backend):
+        with pytest.warns(UserWarning, match="ignored by backend"):
+            chosen = _select_backend(
+                backend,
+                self._tmpl(is_memegen=True),
+                font="impact",
+                force_pillow=False,
+                text_kwargs={"rotation": 15},
+                per_line_overrides=None,
+            )
+        assert chosen == backend
+
+    def test_explicit_matplotlib_does_not_warn(self, recwarn):
+        _select_backend(
+            "matplotlib",
+            self._tmpl(is_memegen=True),
+            font="impact",
+            force_pillow=False,
+            text_kwargs={"rotation": 15},
+            per_line_overrides=None,
+        )
+        assert not [w for w in recwarn if issubclass(w.category, UserWarning)]
 
     def test_auto_picks_pillow_with_per_line_overrides(self):
         chosen = _select_backend(
