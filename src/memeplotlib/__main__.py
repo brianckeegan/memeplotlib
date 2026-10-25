@@ -92,6 +92,15 @@ def _build_parser() -> argparse.ArgumentParser:
             help="Custom background URL forwarded to memegen.",
         )
         sp.add_argument(
+            "--alt-text",
+            dest="alt_text",
+            default=None,
+            help=(
+                "Description of the meme for screen-reader users, embedded in "
+                "the saved file (default: generated from the template and captions)."
+            ),
+        )
+        sp.add_argument(
             "--template-style",
             dest="template_style",
             default=None,
@@ -198,13 +207,19 @@ def _cmd_meme(args: argparse.Namespace) -> int:
         "layout",
         "background",
         "template_style",
+        "alt_text",
     ):
         value = getattr(args, key, None)
         if value is not None:
             kwargs[key] = value
 
-    meme(args.template, *args.lines, **kwargs)
+    from memeplotlib._alt import get_alt_text
+
+    fig, _ = meme(args.template, *args.lines, **kwargs)
     print(f"Saved to {args.out}")
+    alt = get_alt_text(fig)
+    if alt:
+        print(f"Alt text: {alt}")
     return 0
 
 

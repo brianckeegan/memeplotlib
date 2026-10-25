@@ -97,6 +97,16 @@ memes.config["fontsize"] = 96
 memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
 ```
 
+**Alt text for screen readers:** every render gets a description built from
+the template and captions, embedded in saved PNG/SVG/PDF files:
+
+```python
+fig, ax = memes.meme("buzz", "memes", "memes everywhere", savefig="buzz.png")
+memes.get_alt_text(fig)
+# 'Meme using the "Buzz Lightyear" template. Top text: "memes". Bottom text: "memes everywhere".'
+memes.meme("buzz", "memes", alt_text="Buzz Lightyear pointing at memes everywhere")
+```
+
 ## Backends
 
 `memeplotlib` ships three rendering backends. The default `"auto"` policy

@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 
+from memeplotlib._alt import default_meme_alt_text, savefig_metadata, set_alt_text
 from memeplotlib._cache import TemplateCache
 from memeplotlib._config import config
 from memeplotlib._rendering import render_meme
@@ -44,6 +45,9 @@ class Meme:
     backend : str or None, optional
         Override the rendering backend (``"auto"``, ``"memegen"``,
         ``"pillow"``, ``"matplotlib"``). ``None`` uses ``config["backend"]``.
+    alt_text : str or None, optional
+        Text alternative for screen-reader users. ``None`` generates one
+        from the template name and captions; see :attr:`alt_text`.
 
     Examples
     --------
@@ -78,6 +82,7 @@ class Meme:
         background: str | None = None,
         overlays: Sequence[OverlaySpec] | None = None,
         template_style: str | None = None,
+        alt_text: str | None = None,
     ):
         self._template_str: str | None = None
         self._template: Template | None = None
@@ -102,6 +107,7 @@ class Meme:
         self._background = background
         self._overlays = list(overlays) if overlays else None
         self._template_style = template_style
+        self._alt_text = alt_text
         self._per_line_overrides: dict[int, dict[str, object]] = {}
         self._fig: Figure | None = None
         self._ax: Axes | None = None
@@ -235,6 +241,35 @@ class Meme:
         self._backend = backend
         return self
 
+    def with_alt_text(self, text: str | None) -> Meme:
+        """Set (or, with ``None``, reset to the generated default) the alt text.
+
+        Parameters
+        ----------
+        text : str or None
+            Description of the meme for screen-reader users.
+
+        Returns
+        -------
+        Meme
+            Self, for method chaining.
+        """
+        self._alt_text = text
+        if self._ax is not None:
+            set_alt_text(self._ax, self.alt_text)
+        return self
+
+    @property
+    def alt_text(self) -> str:
+        """The alt text for this meme: explicit, or generated from its captions.
+
+        Generating the default resolves the template (which may require a
+        network request for memegen IDs).
+        """
+        if self._alt_text is not None:
+            return self._alt_text
+        return default_meme_alt_text(self._get_template(), self._lines)
+
     def render(
         self,
         ax: Axes | None = None,
@@ -284,6 +319,7 @@ class Meme:
             force_pillow=force_pillow,
             per_line_overrides=self._per_line_overrides or None,
         )
+        set_alt_text(ax_out, self.alt_text)
         self._fig = fig
         self._ax = ax_out
         return fig, ax_out
@@ -309,11 +345,16 @@ class Meme:
             Dots per inch for the saved image.
         **kwargs
             Additional keyword arguments passed to
-            :meth:`matplotlib.figure.Figure.savefig`.
+            :meth:`matplotlib.figure.Figure.savefig`. The alt text is
+            embedded as PNG/SVG ``Description`` (PDF ``Subject``) metadata;
+            entries in a ``metadata`` kwarg take precedence.
         """
         if self._fig is None:
             self.render(dpi=dpi)
         assert self._fig is not None  # render() always assigns self._fig
+        metadata = {**savefig_metadata(path, self.alt_text), **kwargs.pop("metadata", {})}
+        if metadata:
+            kwargs["metadata"] = metadata
         self._fig.savefig(
             str(path),
             dpi=dpi if dpi is not None else config["dpi"],

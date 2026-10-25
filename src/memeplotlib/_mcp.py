@@ -40,7 +40,7 @@ except ImportError as exc:  # pragma: no cover - exercised only without [mcp] ex
         f"Install with: pip install 'memeplotlib[mcp]'. Original error: {exc}"
     ) from exc
 
-from memeplotlib import __version__
+from memeplotlib import __version__, get_alt_text
 from memeplotlib import meme as _meme
 from memeplotlib._template import TemplateRegistry
 
@@ -62,8 +62,9 @@ def _encode_png(path: str) -> str:
 @server.tool(
     name="meme",
     description=(
-        "Render a meme image. Returns a dict with the saved file path "
-        "and a base64-encoded PNG. The template can be a memegen ID "
+        "Render a meme image. Returns a dict with the saved file path, "
+        "a base64-encoded PNG, and alt_text describing the image (use it "
+        "as the image's alt text when posting it). The template can be a memegen ID "
         "(e.g. 'buzz', 'drake', 'doge'), a local file path, or an "
         "HTTP(S) URL. Use 'top'/'bottom' for two-slot templates, or "
         "'lines' for templates with three or more caption slots."
@@ -89,6 +90,7 @@ def render_meme_tool(
     fontsize: float | None = None,
     style: str | None = None,
     dpi: int | None = None,
+    alt_text: str | None = None,
 ) -> dict[str, str]:
     """Render a meme and return path + base64.
 
@@ -131,11 +133,14 @@ def render_meme_tool(
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
     dpi : int, optional
         Resolution of the saved PNG.
+    alt_text : str, optional
+        Description for screen-reader users. Generated from the template
+        and captions when omitted.
 
     Returns
     -------
     dict
-        Keys: ``path`` (str), ``base64_png`` (str).
+        Keys: ``path`` (str), ``base64_png`` (str), ``alt_text`` (str).
 
     Raises
     ------
@@ -172,6 +177,7 @@ def render_meme_tool(
         "fontsize": fontsize,
         "style": style,
         "dpi": dpi,
+        "alt_text": alt_text,
     }
     # Only forward what the client set so meme()'s sentinel defaults (which
     # drive backend selection) stay intact.
@@ -182,11 +188,16 @@ def render_meme_tool(
     # it creates, so release whatever this call opened -- even on error.
     open_before = set(plt.get_fignums())
     try:
-        _meme(template, *captions, **kwargs)
+        fig, _ = _meme(template, *captions, **kwargs)
+        alt_text_out = get_alt_text(fig) or ""
     finally:
         for num in set(plt.get_fignums()) - open_before:
             plt.close(num)
-    return {"path": out_path, "base64_png": _encode_png(out_path)}
+    return {
+        "path": out_path,
+        "base64_png": _encode_png(out_path),
+        "alt_text": alt_text_out,
+    }
 
 
 @server.tool(
