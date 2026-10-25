@@ -126,3 +126,32 @@ class TestEditsAfterRender:
         m.render()
         assert edit(m) is m  # still chainable
         assert m._fig is None
+
+
+class TestMemeForcesPillow:
+    """``Meme`` must route client-only knobs to Pillow, exactly like ``meme()``."""
+
+    @pytest.fixture
+    def captured(self, monkeypatch, sample_template):
+        import memeplotlib._meme as meme_mod
+
+        calls: list[dict] = []
+
+        def fake_render_meme(template, lines, **kwargs):
+            calls.append(kwargs)
+            return plt.subplots()
+
+        monkeypatch.setattr(meme_mod, "render_meme", fake_render_meme)
+        return calls
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [{"fontsize": 48}, {"outline_color": "white"}, {"outline_width": 4.0}],
+    )
+    def test_client_only_knobs_force_pillow(self, captured, sample_template, kwargs):
+        Meme(sample_template, "a", "b", **kwargs).render()
+        assert captured[0]["force_pillow"] is True
+
+    def test_plain_meme_does_not_force_pillow(self, captured, sample_template):
+        Meme(sample_template, "a", "b", font="impact", color="yellow").render()
+        assert captured[0]["force_pillow"] is False

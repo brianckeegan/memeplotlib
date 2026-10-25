@@ -13,6 +13,8 @@ import numpy as np
 import platformdirs
 from PIL import Image
 
+from memeplotlib._config import config
+
 
 def _default_cache_dir() -> Path:
     return Path(platformdirs.user_cache_dir("memeplotlib"))
@@ -27,8 +29,10 @@ class TemplateCache:
     Parameters
     ----------
     cache_dir : Path or None, optional
-        Directory for on-disk cache files. Uses the platform default
-        (via :mod:`platformdirs`) if ``None``.
+        Directory for on-disk cache files. If ``None``, the directory is
+        resolved on every access from ``config["cache_dir"]``, falling back
+        to the platform default (via :mod:`platformdirs`), so changing the
+        config takes effect without rebuilding the cache.
     max_memory : int, optional
         Maximum number of images to keep in the in-memory LRU cache
         (default: 50).
@@ -39,10 +43,22 @@ class TemplateCache:
         cache_dir: Path | None = None,
         max_memory: int = 50,
     ):
-        self._cache_dir = cache_dir or _default_cache_dir()
-        self._images_dir = self._cache_dir / "images"
+        self._explicit_dir = Path(cache_dir) if cache_dir is not None else None
         self._memory: OrderedDict[str, np.ndarray] = OrderedDict()
         self._max_memory = max_memory
+
+    @property
+    def _cache_dir(self) -> Path:
+        if self._explicit_dir is not None:
+            return self._explicit_dir
+        configured = config["cache_dir"]
+        if configured:
+            return Path(configured).expanduser()
+        return _default_cache_dir()
+
+    @property
+    def _images_dir(self) -> Path:
+        return self._cache_dir / "images"
 
     def _ensure_dirs(self) -> None:
         """Create cache directories if they don't exist."""
