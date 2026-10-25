@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import base64
 import os
+import sys
 import tempfile
 from typing import Any
 
@@ -28,6 +29,8 @@ import matplotlib
 
 # Force the Agg backend before any matplotlib import touches a GUI loop.
 matplotlib.use("Agg")
+
+import matplotlib.pyplot as plt  # noqa: E402
 
 try:
     from mcp.server.fastmcp import FastMCP
@@ -175,7 +178,14 @@ def render_meme_tool(
     kwargs: dict[str, Any] = {k: v for k, v in options.items() if v is not None}
     kwargs.update(savefig=out_path, show=False)
 
-    _meme(template, *captions, **kwargs)
+    # The server is long-lived and pyplot keeps a reference to every figure
+    # it creates, so release whatever this call opened -- even on error.
+    open_before = set(plt.get_fignums())
+    try:
+        _meme(template, *captions, **kwargs)
+    finally:
+        for num in set(plt.get_fignums()) - open_before:
+            plt.close(num)
     return {"path": out_path, "base64_png": _encode_png(out_path)}
 
 
@@ -218,7 +228,9 @@ def list_templates_tool() -> list[dict[str, str]]:
 
 def main() -> int:
     """Console-script entry point."""
-    print(f"memeplotlib-mcp {__version__} (stdio JSON-RPC)", flush=True)
+    # stdout is the JSON-RPC channel on the stdio transport; anything else
+    # written there corrupts the stream, so diagnostics go to stderr.
+    print(f"memeplotlib-mcp {__version__} (stdio JSON-RPC)", file=sys.stderr, flush=True)
     server.run()
     return 0
 

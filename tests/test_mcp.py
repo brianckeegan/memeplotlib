@@ -47,6 +47,15 @@ class TestServerSurface:
         # confirm the entry point exists with the expected signature.
         assert callable(_mcp.main)
 
+    def test_main_keeps_stdout_clean(self, monkeypatch, capsys):
+        # stdout carries JSON-RPC on the stdio transport; a banner there
+        # breaks the client handshake.
+        monkeypatch.setattr(_mcp.server, "run", lambda *a, **k: None)
+        assert _mcp.main() == 0
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "memeplotlib-mcp" in captured.err
+
 
 class TestRenderMemeTool:
     @responses.activate
@@ -82,6 +91,48 @@ class TestRenderMemeTool:
         assert isinstance(result["base64_png"], str)
         assert len(result["base64_png"]) > 100  # non-trivial content
         assert out.exists()
+
+    @responses.activate
+    def test_render_closes_its_figures(self, fake_png_bytes, tmp_path):
+        import matplotlib.pyplot as plt
+
+        responses.add(responses.GET, f"{API_BASE}/templates/", json=[])
+        responses.add(
+            responses.GET,
+            f"{API_BASE}/templates/buzz",
+            json={
+                "id": "buzz",
+                "name": "Buzz",
+                "lines": 2,
+                "blank": f"{API_BASE}/images/buzz.png",
+            },
+        )
+        responses.add(
+            responses.GET,
+            f"{API_BASE}/images/buzz.png",
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+
+        before = plt.get_fignums()
+        for i in range(3):
+            _mcp.render_meme_tool(
+                template="buzz", top=f"call {i}", out_path=str(tmp_path / f"{i}.png")
+            )
+        assert plt.get_fignums() == before
+
+    def test_render_closes_figures_on_error(self, tmp_path, monkeypatch):
+        import matplotlib.pyplot as plt
+
+        def boom(*args, **kwargs):
+            plt.figure()
+            raise RuntimeError("render failed")
+
+        monkeypatch.setattr(_mcp, "_meme", boom)
+        before = plt.get_fignums()
+        with pytest.raises(RuntimeError):
+            _mcp.render_meme_tool(template="buzz", out_path=str(tmp_path / "x.png"))
+        assert plt.get_fignums() == before
 
     @responses.activate
     def test_render_without_out_path_uses_tempfile(self, fake_png_bytes):
