@@ -33,7 +33,7 @@ from matplotlib.font_manager import FontProperties, findfont, fontManager
 from PIL import Image
 
 from memeplotlib._cache import TemplateCache
-from memeplotlib._config import DEFAULT_FIGSIZE_WIDTH, config
+from memeplotlib._config import DEFAULT_COLOR, DEFAULT_FIGSIZE_WIDTH, config
 from memeplotlib._pillow import render_pillow
 from memeplotlib._template import (
     DEFAULT_TEXT_POSITIONS,
@@ -435,7 +435,7 @@ def _render_via_memegen(
     figsize: tuple[float, float] | None,
     dpi: int,
     font: str,
-    color: str,
+    color: str | None,
     style: str,
     extension: str,
     width: int | None,
@@ -450,6 +450,12 @@ def _render_via_memegen(
     # Style transforms (upper/lower/none) are client-side; apply before
     # encoding so memegen receives the final visible string.
     transformed = [apply_style(line, style) if line else line for line in lines]
+
+    # memegen's `color=` is one value per line, so a single color would only
+    # paint line 1. memeplotlib's `color` means "all captions", as on the
+    # Pillow/matplotlib backends; repeat it. Comma lists pass through as-is.
+    if color and "," not in color:
+        color = ",".join([color] * max(1, len(lines)))
 
     memegen_font = memegen_font_for(font)
     url = build_memegen_url(
@@ -663,6 +669,10 @@ def render_meme(
     )
 
     if chosen == "memegen":
+        # memegen's `color=` sets per-line text colors, and templates define
+        # their own (some captions are black). Only send it when the caller
+        # chose a color, per call or by changing config["color"].
+        use_template_color = color is None and config["color"] == DEFAULT_COLOR
         return _render_via_memegen(
             template,
             lines,
@@ -670,7 +680,7 @@ def render_meme(
             figsize=figsize,
             dpi=dpi_val,
             font=font_val,
-            color=color_val,
+            color=None if use_template_color else color_val,
             style=style_val,
             extension=extension_val,
             width=width_val,

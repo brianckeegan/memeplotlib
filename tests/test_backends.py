@@ -264,3 +264,36 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestMemegenColor:
+    """memegen's color= is per line; templates keep their colors by default."""
+
+    def _render(self, fake_png_bytes, **kwargs):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", "b", backend="memegen", **kwargs)
+        return [str(c.request.url) for c in responses.calls if "/images/buzz/" in c.request.url][0]
+
+    @responses.activate
+    def test_default_color_is_not_sent(self, buzz_metadata_response, fake_png_bytes):
+        assert "color=" not in self._render(fake_png_bytes)
+
+    @responses.activate
+    def test_single_color_applies_to_every_line(self, buzz_metadata_response, fake_png_bytes):
+        assert "color=yellow,yellow" in self._render(fake_png_bytes, color="yellow")
+
+    @responses.activate
+    def test_per_line_colors_pass_through(self, buzz_metadata_response, fake_png_bytes):
+        assert "color=white,red" in self._render(fake_png_bytes, color="white,red")
+
+    @responses.activate
+    def test_config_color_change_is_sent(
+        self, buzz_metadata_response, fake_png_bytes, monkeypatch
+    ):
+        monkeypatch.setitem(memes.config, "color", "yellow")
+        assert "color=yellow,yellow" in self._render(fake_png_bytes)
