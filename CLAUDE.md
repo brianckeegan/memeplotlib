@@ -109,6 +109,7 @@ recipe at `conda-recipe/meta.yaml`. If it's matplotlib, also update
 
 **Cutting a release** — bump `pyproject.toml::project.version` and
 `src/memeplotlib/__init__.py::__version__` together (they must match).
+Dispatch the "Release tests" workflow on the release branch first.
 Add a CHANGELOG entry. Open a PR to `main`. After merge, the release
 workflow takes over via OIDC trusted publishing — no API token in
 repo secrets. Stop and ask before publishing to PyPI.
@@ -188,7 +189,11 @@ memeplotlib-mcp   # reads JSON-RPC on stdin
 - Bugfix branches: `fix/<short-name>`.
 - This refactor branch: `chore/comprehensive-review` (or whatever name
   the worktree was created with).
-- Open one PR per logical change. The CI matrix on `ci.yml` runs across
-  Python 3.10–3.13 × ubuntu/macos/windows. Wait for green before merge.
+- Open one PR per logical change. `ci.yml` runs lint only (ruff, black,
+  `mypy --strict`) on every push/PR — run `pytest --cov --mpl` locally
+  before pushing. The full Python 3.10–3.13 × ubuntu/macos/windows matrix,
+  docs build and wheel check live in `release-tests.yml`: it gates every
+  PyPI publish and can be run by hand (Actions → "Release tests" → Run
+  workflow); run it on the release PR before merging.
 - Release-drafter (if configured) auto-builds the changelog from PR
   labels: `breaking`, `feature`, `fix`, `docs`, `internal`.
