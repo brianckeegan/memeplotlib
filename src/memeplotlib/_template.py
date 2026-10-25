@@ -32,8 +32,20 @@ def _get_session() -> requests.Session:
     return session
 
 
-class TemplateNotFoundError(Exception):
-    """Raised when a template ID is not found in the memegen API."""
+class TemplateNotFoundError(LookupError):
+    """Raised when a template ID is not found in the memegen API.
+
+    Subclasses :class:`LookupError`, so generic "not found" handling (and
+    any existing ``except Exception``) catches it.
+    """
+
+
+def _not_found(template_id: str) -> TemplateNotFoundError:
+    return TemplateNotFoundError(
+        f"Template {template_id!r} not found. Search with "
+        f"memeplotlib.TemplateRegistry().search({template_id!r}) or "
+        f"`memeplotlib search {template_id}`."
+    )
 
 
 @dataclass(frozen=True)
@@ -166,7 +178,7 @@ class Template:
         resp = _get_session().get(url, timeout=config["api_timeout"])
 
         if resp.status_code == 404:
-            raise TemplateNotFoundError(f"Template '{template_id}' not found")
+            raise _not_found(template_id)
         resp.raise_for_status()
 
         data = resp.json()

@@ -39,10 +39,14 @@ Classes
    :members:
    :show-inheritance:
 
+.. autoclass:: TextPosition
+   :members:
+   :show-inheritance:
+
 Singletons and exceptions
 --------------------------
 
 .. autodata:: config
    :annotation: = MemeplotlibConfig()
 
-.. autoexception:: memeplotlib._template.TemplateNotFoundError
+.. autoexception:: TemplateNotFoundError
