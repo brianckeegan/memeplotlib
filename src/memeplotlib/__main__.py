@@ -51,6 +51,19 @@ def _build_parser() -> argparse.ArgumentParser:
             choices=["upper", "lower", "none"],
             help="Caption text transform.",
         )
+        sp.add_argument(
+            "--outline-color",
+            dest="outline_color",
+            default=None,
+            help="Caption outline color (forces the Pillow backend under 'auto').",
+        )
+        sp.add_argument(
+            "--outline-width",
+            dest="outline_width",
+            type=float,
+            default=None,
+            help="Caption outline width (forces the Pillow backend under 'auto').",
+        )
         sp.add_argument("--fontsize", type=float, default=None, help="Font size in points.")
         sp.add_argument("--dpi", type=int, default=None, help="DPI for the rendered output.")
         sp.add_argument(
@@ -173,6 +186,8 @@ def _cmd_meme(args: argparse.Namespace) -> int:
     for key in (
         "font",
         "color",
+        "outline_color",
+        "outline_width",
         "style",
         "fontsize",
         "dpi",

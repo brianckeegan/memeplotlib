@@ -200,3 +200,59 @@ class TestSearchAndList:
         results = _mcp.list_templates_tool()
         assert len(results) == 2
         assert {r["id"] for r in results} == {"buzz", "drake"}
+
+
+class TestRenderMemeToolForwarding:
+    """The MCP tool should expose the same knobs as ``memeplotlib.meme``."""
+
+    @pytest.fixture
+    def spy(self, monkeypatch, tmp_path):
+        calls: list[tuple[tuple, dict]] = []
+
+        def fake_meme(*args, **kwargs):
+            calls.append((args, kwargs))
+            # The tool base64-encodes the saved file, so write a real PNG.
+            Image.new("RGB", (4, 4)).save(kwargs["savefig"])
+
+        monkeypatch.setattr(_mcp, "_meme", fake_meme)
+        return calls
+
+    def test_lines_supports_three_or_more_slots(self, spy, tmp_path):
+        _mcp.render_meme_tool(
+            template="gru",
+            lines=["plan", "step 2", "uh oh", "uh oh"],
+            out_path=str(tmp_path / "a.png"),
+        )
+        args, _ = spy[0]
+        assert args == ("gru", "plan", "step 2", "uh oh", "uh oh")
+
+    def test_lines_and_top_are_mutually_exclusive(self, spy, tmp_path):
+        with pytest.raises(ValueError, match="either 'lines'"):
+            _mcp.render_meme_tool(template="buzz", top="a", lines=["b"])
+
+    def test_styling_options_are_forwarded(self, spy, tmp_path):
+        _mcp.render_meme_tool(
+            template="buzz",
+            top="a",
+            out_path=str(tmp_path / "a.png"),
+            outline_color="white",
+            outline_width=3.0,
+            style="none",
+            layout="top",
+            background="https://example.com/bg.png",
+            dpi=72,
+        )
+        _, kwargs = spy[0]
+        assert kwargs["outline_color"] == "white"
+        assert kwargs["outline_width"] == 3.0
+        assert kwargs["style"] == "none"
+        assert kwargs["layout"] == "top"
+        assert kwargs["background"] == "https://example.com/bg.png"
+        assert kwargs["dpi"] == 72
+
+    def test_unset_options_are_not_forwarded(self, spy, tmp_path):
+        # meme() relies on sentinel defaults to pick a backend, so the tool
+        # must not pass explicit None for knobs the client left unset.
+        _mcp.render_meme_tool(template="buzz", top="a", out_path=str(tmp_path / "a.png"))
+        _, kwargs = spy[0]
+        assert set(kwargs) == {"savefig", "show"}
