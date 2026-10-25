@@ -279,8 +279,14 @@ a two-level strategy:
 2. **On-disk file cache** -- images stored as PNG files, catalog as JSON
    with a 24-hour TTL.
 
-The cache directory is determined by :mod:`platformdirs` (typically
+The cache directory is ``config["cache_dir"]`` when set, otherwise the
+platform default from :mod:`platformdirs` (typically
 ``~/.cache/memeplotlib`` on Linux, ``~/Library/Caches/memeplotlib`` on macOS).
+Changing ``config["cache_dir"]`` takes effect immediately:
+
+.. code-block:: python
+
+   memes.config["cache_dir"] = "/tmp/meme-cache"
 
 To clear the cache:
 
