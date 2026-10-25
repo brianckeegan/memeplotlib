@@ -130,6 +130,30 @@ The ``position`` parameter controls text layout:
    :alt: Bar chart with "NOT STONKS" at the bottom
    :width: 400px
 
+Accessibility: Alt Text
+------------------------
+
+A meme is text inside a picture, so screen-reader users need a text
+alternative. Every render records one, generated from the template name
+and the captions *as you typed them* (many screen readers spell out
+ALL-CAPS words letter by letter, so the upper-cased image text is not
+reused):
+
+.. code-block:: python
+
+   fig, ax = memes.meme("buzz", "memes", "memes everywhere")
+   memes.get_alt_text(fig)
+   # 'Meme using the "Buzz Lightyear" template. Top text: "memes".
+   #  Bottom text: "memes everywhere".'
+
+Pass ``alt_text=`` to :func:`~memeplotlib.meme`,
+:func:`~memeplotlib.memify`, or :class:`~memeplotlib.Meme` (or call
+:meth:`Meme.with_alt_text <memeplotlib.Meme.with_alt_text>`) to write your
+own. When memeplotlib saves the file (``savefig=`` or ``Meme.save``), the
+description is embedded as PNG/SVG ``Description`` or PDF ``Subject``
+metadata. The CLI accepts ``--alt-text`` and prints the description after
+saving, and the MCP ``meme`` tool returns it as ``alt_text``.
+
 Global Configuration
 ---------------------
 

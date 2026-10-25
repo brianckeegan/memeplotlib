@@ -17,6 +17,7 @@ Quick start::
     )
 """
 
+from memeplotlib._alt import get_alt_text
 from memeplotlib._api import meme, memify
 from memeplotlib._config import MemeplotlibConfig, config, rc_context
 from memeplotlib._meme import Meme
@@ -34,6 +35,7 @@ __all__ = [
     "__version__",
     "build_memegen_url",
     "config",
+    "get_alt_text",
     "meme",
     "memify",
     "rc_context",

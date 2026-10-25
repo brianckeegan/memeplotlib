@@ -54,6 +54,19 @@ def _build_parser() -> argparse.ArgumentParser:
             choices=["upper", "lower", "none"],
             help="Caption text transform.",
         )
+        sp.add_argument(
+            "--outline-color",
+            dest="outline_color",
+            default=None,
+            help="Caption outline color (forces the Pillow backend under 'auto').",
+        )
+        sp.add_argument(
+            "--outline-width",
+            dest="outline_width",
+            type=float,
+            default=None,
+            help="Caption outline width (forces the Pillow backend under 'auto').",
+        )
         sp.add_argument("--fontsize", type=float, default=None, help="Font size in points.")
         sp.add_argument("--dpi", type=int, default=None, help="DPI for the rendered output.")
         sp.add_argument(
@@ -80,6 +93,15 @@ def _build_parser() -> argparse.ArgumentParser:
             "--background",
             default=None,
             help="Custom background URL forwarded to memegen.",
+        )
+        sp.add_argument(
+            "--alt-text",
+            dest="alt_text",
+            default=None,
+            help=(
+                "Description of the meme for screen-reader users, embedded in "
+                "the saved file (default: generated from the template and captions)."
+            ),
         )
         sp.add_argument(
             "--template-style",
@@ -185,6 +207,8 @@ def _cmd_meme(args: argparse.Namespace) -> int:
     for key in (
         "font",
         "color",
+        "outline_color",
+        "outline_width",
         "style",
         "fontsize",
         "dpi",
@@ -195,13 +219,19 @@ def _cmd_meme(args: argparse.Namespace) -> int:
         "layout",
         "background",
         "template_style",
+        "alt_text",
     ):
         value = getattr(args, key, None)
         if value is not None:
             kwargs[key] = value
 
-    meme(args.template, *args.lines, **kwargs)
+    from memeplotlib._alt import get_alt_text
+
+    fig, _ = meme(args.template, *args.lines, **kwargs)
     print(f"Saved to {args.out}")
+    alt = get_alt_text(fig)
+    if alt:
+        print(f"Alt text: {alt}")
     return 0
 
 
