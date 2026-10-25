@@ -47,9 +47,10 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
   to the module-private `_UNSET` sentinel — never `None` — so the
   dispatcher can tell "user passed it" from "user accepted the default".
 - **Forward `**kwargs` to `Axes.text`** under the matplotlib backend only.
-  Passing any `**text_kwargs` under `backend="auto"` forces the Pillow
-  fallback; under `backend="memegen"` they are silently ignored (memegen
-  has no equivalent).
+  Passing any `**text_kwargs` under `backend="auto"` selects the
+  matplotlib backend (the only one that can apply them); under an
+  explicit `backend="memegen"` or `"pillow"` they are ignored with a
+  `UserWarning`.
 - **memegen never honours custom outlines**: any non-default
   `outline_color` / `outline_width` forces the Pillow backend under
   `auto`. memegen always renders a hard-coded black stroke.

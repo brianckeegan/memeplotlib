@@ -8,8 +8,8 @@ rendering API can't express the requested operation:
 - The user supplied an explicit ``fontsize`` (memegen always auto-fits).
 - The user supplied a non-default ``outline_color`` / ``outline_width``
   (memegen draws a hard-coded black stroke).
-- The user supplied custom ``TextPosition`` overrides or ``Axes.text``
-  kwargs (memegen has no equivalent).
+- The user supplied per-line overrides via ``Meme.line`` (memegen has no
+  equivalent).
 
 The rendered image is a NumPy RGBA array which the dispatcher then displays
 in matplotlib via ``ax.imshow``.
