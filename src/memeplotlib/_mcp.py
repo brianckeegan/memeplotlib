@@ -33,7 +33,8 @@ try:
     from mcp.server.fastmcp import FastMCP
 except ImportError as exc:  # pragma: no cover - exercised only without [mcp] extra
     raise ImportError(
-        "memeplotlib-mcp requires the [mcp] extra. " "Install with: pip install 'memeplotlib[mcp]'"
+        "memeplotlib-mcp requires the [mcp] extra (mcp>=1.0,<2). "
+        f"Install with: pip install 'memeplotlib[mcp]'. Original error: {exc}"
     ) from exc
 
 from memeplotlib import __version__
