@@ -14,8 +14,15 @@ on:
           - pypi
 
 jobs:
+  tests:
+    # Full OS x Python matrix + docs + wheel check; publishing waits on it.
+    name: Release tests
+    uses: ./.github/workflows/release-tests.yml
+    secrets: inherit
+
   build:
     name: Build distribution
+    needs: tests
     runs-on: ubuntu-latest
 
     steps:
