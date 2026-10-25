@@ -12,6 +12,8 @@ Top-level functions
 
 .. autofunction:: rc_context
 
+.. autofunction:: get_alt_text
+
 .. autofunction:: build_memegen_url
 
 Classes
