@@ -39,6 +39,8 @@ from memeplotlib._template import (
     DEFAULT_TEXT_POSITIONS,
     Template,
     TextPosition,
+    _api_key,
+    _auth_headers,
     _get_session,
 )
 from memeplotlib._text import apply_style
@@ -416,7 +418,7 @@ def _fetch_rendered_image(url: str, cache: TemplateCache | None) -> np.ndarray:
         if cached is not None:
             return cached
 
-    resp = _get_session().get(url, timeout=config["image_timeout"])
+    resp = _get_session().get(url, timeout=config["image_timeout"], headers=_auth_headers(url))
     resp.raise_for_status()
     image_bytes = resp.content
     img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
@@ -465,6 +467,8 @@ def _render_via_memegen(
         layout=layout,
         background=background,
         overlays=overlays,
+        # An API key with image access lets memegen drop its watermark.
+        watermark="none" if _api_key() else None,
     )
 
     img = _fetch_rendered_image(url, cache)

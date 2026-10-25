@@ -264,3 +264,65 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestApiKey:
+    @pytest.fixture
+    def keyed(self, monkeypatch):
+        monkeypatch.delenv("MEMEPLOTLIB_API_KEY", raising=False)
+        monkeypatch.setitem(memes.config, "api_key", "secret-key")
+
+    @responses.activate
+    def test_key_sent_to_memegen_only_with_watermark_off(
+        self, keyed, buzz_metadata_response, fake_png_bytes
+    ):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", "b", backend="memegen")
+        for call in responses.calls:
+            assert call.request.headers.get("X-API-KEY") == "secret-key"
+        rendered = [c.request.url for c in responses.calls if "/images/buzz/" in c.request.url]
+        assert "watermark=none" in rendered[0]
+        assert "secret-key" not in rendered[0]  # header only, never in the URL
+
+    @responses.activate
+    def test_key_never_sent_to_other_hosts(self, keyed, fake_png_bytes):
+        url = "https://example.com/photo.png"
+        responses.add(responses.GET, url, body=fake_png_bytes, content_type="image/png")
+        meme(url, "a")
+        assert "X-API-KEY" not in responses.calls[0].request.headers
+
+    @responses.activate
+    def test_env_var_is_used(self, monkeypatch, buzz_metadata_response, fake_png_bytes):
+        monkeypatch.setenv("MEMEPLOTLIB_API_KEY", "from-env")
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", backend="memegen")
+        assert responses.calls[-1].request.headers.get("X-API-KEY") == "from-env"
+
+    @responses.activate
+    def test_no_key_no_header_no_watermark_param(
+        self, monkeypatch, buzz_metadata_response, fake_png_bytes
+    ):
+        monkeypatch.delenv("MEMEPLOTLIB_API_KEY", raising=False)
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", backend="memegen")
+        last = responses.calls[-1].request
+        assert "X-API-KEY" not in last.headers and "watermark=" not in last.url
+
+    def test_repr_masks_key(self, keyed):
+        assert "secret-key" not in repr(memes.config)
+        assert "'api_key': '***'" in repr(memes.config)

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import os
 import threading
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -30,6 +31,24 @@ def _get_session() -> requests.Session:
     session.mount("https://", adapter)
     session.mount("http://", adapter)
     return session
+
+
+def _api_key() -> str | None:
+    """The memegen API key from ``config["api_key"]`` or ``MEMEPLOTLIB_API_KEY``."""
+    return config["api_key"] or os.environ.get("MEMEPLOTLIB_API_KEY") or None
+
+
+def _auth_headers(url: str, api_base: str | None = None) -> dict[str, str]:
+    """``X-API-KEY`` header for requests to the memegen API, else nothing.
+
+    The key is only ever sent to *api_base* (default ``config["api_base"]``),
+    never to arbitrary template or background image hosts.
+    """
+    key = _api_key()
+    base = (api_base or config["api_base"]).rstrip("/") + "/"
+    if key and url.startswith(base):
+        return {"X-API-KEY": key}
+    return {}
 
 
 class TemplateNotFoundError(Exception):
@@ -163,7 +182,9 @@ class Template:
         """
         base = api_base or config["api_base"]
         url = f"{base}/templates/{template_id}"
-        resp = _get_session().get(url, timeout=config["api_timeout"])
+        resp = _get_session().get(
+            url, timeout=config["api_timeout"], headers=_auth_headers(url, base)
+        )
 
         if resp.status_code == 404:
             raise TemplateNotFoundError(f"Template '{template_id}' not found")
@@ -314,7 +335,11 @@ class Template:
 
         # Load from local file or URL
         if self.image_url.startswith(("http://", "https://")):
-            resp = _get_session().get(self.image_url, timeout=config["image_timeout"])
+            resp = _get_session().get(
+                self.image_url,
+                timeout=config["image_timeout"],
+                headers=_auth_headers(self.image_url),
+            )
             resp.raise_for_status()
             image_bytes = resp.content
             img = Image.open(io.BytesIO(image_bytes)).convert("RGBA")
@@ -368,7 +393,10 @@ class TemplateRegistry:
                 return cached
 
         # Fetch from API
-        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config["api_timeout"])
+        url = f"{self._api_base}/templates/"
+        resp = _get_session().get(
+            url, timeout=config["api_timeout"], headers=_auth_headers(url, self._api_base)
+        )
         resp.raise_for_status()
         self._catalog = resp.json()
 
@@ -446,7 +474,10 @@ class TemplateRegistry:
     def refresh(self) -> None:
         """Force re-fetch of the template catalog from the API."""
         self._catalog = None
-        resp = _get_session().get(f"{self._api_base}/templates/", timeout=config["api_timeout"])
+        url = f"{self._api_base}/templates/"
+        resp = _get_session().get(
+            url, timeout=config["api_timeout"], headers=_auth_headers(url, self._api_base)
+        )
         resp.raise_for_status()
         self._catalog = resp.json()
         if config["cache_enabled"]:

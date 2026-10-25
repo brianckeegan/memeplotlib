@@ -129,6 +129,7 @@ def build_memegen_url(
     layout: str | None = None,
     background: str | None = None,
     overlays: Sequence[OverlaySpec] | None = None,
+    watermark: str | None = None,
 ) -> str:
     """Construct a memegen rendering URL.
 
@@ -161,6 +162,10 @@ def build_memegen_url(
         Custom background image URL.
     overlays : sequence of OverlaySpec or None, optional
         Ad-hoc overlay placements.
+    watermark : str or None, optional
+        ``"none"`` asks memegen to omit its "Memegen.link" watermark. It is
+        honoured only for requests carrying an API key with image access
+        (``config["api_key"]``).
 
     Returns
     -------
@@ -219,6 +224,8 @@ def build_memegen_url(
         params.append(("layout", layout))
     if background is not None:
         params.append(("background", background))
+    if watermark is not None:
+        params.append(("watermark", watermark))
 
     if overlays:
         for ov in overlays:
