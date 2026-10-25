@@ -259,6 +259,20 @@ class TestResolveTemplate:
         assert t.id == "buzz"
 
 
+class TestStylesFilter:
+    def test_config_artifacts_are_dropped(self):
+        tmpl = Template._from_api_data(
+            {
+                "id": "buzz",
+                "name": "Buzz",
+                "lines": 2,
+                "styles": ["default", "config.528cef87abc", "animated", 3],
+            },
+            "https://api.memegen.link",
+        )
+        assert tmpl.styles == ["default", "animated"]
+
+
 class TestTemplateNotFoundErrorApi:
     def test_public_exports(self):
         import memeplotlib
