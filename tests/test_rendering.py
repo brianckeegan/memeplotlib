@@ -171,7 +171,8 @@ class TestRenderMeme:
 
     def test_extra_lines_ignored(self, sample_template):
         # Template has 2 positions, 3 lines given — third should be ignored
-        fig, ax = render_meme(sample_template, ["one", "two", "three"])
+        with pytest.warns(UserWarning, match="caption slot"):
+            fig, ax = render_meme(sample_template, ["one", "two", "three"])
         texts = ax.texts
         assert len(texts) == 2
 
@@ -213,6 +214,28 @@ class TestRenderMemify:
         fig, ax = plt.subplots()
         with pytest.raises(ValueError, match="Invalid position"):
             render_memify(fig, ["text"], position="diagonal")
+
+
+class TestDroppedLinesWarning:
+    def test_extra_lines_warn(self, sample_template):
+        with pytest.warns(UserWarning, match=r"2 caption slot\(s\); ignoring extra text: 'three'"):
+            render_meme(sample_template, ["one", "two", "three"])
+
+    def test_empty_extra_lines_do_not_warn(self, sample_template, recwarn):
+        render_meme(sample_template, ["one", "two", ""])
+        assert not [w for w in recwarn if "caption slot" in str(w.message)]
+
+    def test_memify_extra_lines_warn(self):
+        fig, _ = plt.subplots()
+        with pytest.warns(UserWarning, match="memify position 'top' has 1 caption slot"):
+            render_memify(fig, ["kept", "dropped"], position="top")
+
+    def test_warning_points_at_caller(self, sample_image_file):
+        from memeplotlib import meme
+
+        with pytest.warns(UserWarning, match="caption slot") as record:
+            meme(sample_image_file, "a", "b", "c")
+        assert record[0].filename == __file__
 
 
 class TestPillowFontCaching:

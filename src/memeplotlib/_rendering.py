@@ -383,6 +383,18 @@ def _smart_wrap(text: str, box_width_frac: float) -> str:
 # --- Main rendering functions ---
 
 
+def _warn_dropped_lines(lines: Sequence[str], capacity: int, where: str) -> None:
+    """Warn when non-empty caption lines have no slot to render into."""
+    dropped = [line for line in lines[capacity:] if line]
+    if dropped:
+        warnings.warn(
+            f"{where} has {capacity} caption slot(s); ignoring extra text: "
+            f"{', '.join(repr(line) for line in dropped)}",
+            UserWarning,
+            stacklevel=4,
+        )
+
+
 def _figure_for_image(
     img: np.ndarray,
     ax: Axes | None,
@@ -669,6 +681,9 @@ def render_meme(
         style=style_val,
     )
 
+    capacity = template.lines_count if chosen == "memegen" else len(template.text_positions)
+    _warn_dropped_lines(lines, capacity, f"Template {template.id!r}")
+
     if chosen == "memegen":
         return _render_via_memegen(
             template,
@@ -855,6 +870,8 @@ def render_memify(
         positions = [DEFAULT_TEXT_POSITIONS[1]]
     else:  # center
         positions = [TextPosition(anchor_x=0.0, anchor_y=0.4, scale_x=1.0, scale_y=0.2)]
+
+    _warn_dropped_lines(lines, len(positions), f"memify position {position!r}")
 
     # Create a transparent overlay axes spanning the full figure
     overlay_ax = fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor="none")
