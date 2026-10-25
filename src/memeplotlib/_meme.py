@@ -34,11 +34,14 @@ class Meme:
     color : str or None, optional
         Text fill color.
     outline_color : str or None, optional
-        Text outline color.
+        Text outline color. Forces the Pillow backend under
+        ``backend="auto"``, since memegen renders a hard-coded black stroke.
     outline_width : float or None, optional
-        Outline stroke width.
+        Outline stroke width. Forces the Pillow backend under
+        ``backend="auto"``.
     fontsize : float or None, optional
-        Font size in points.
+        Font size in points. Forces the Pillow backend under
+        ``backend="auto"`` (memegen always auto-fits).
     style : str or None, optional
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
     backend : str or None, optional
@@ -258,7 +261,14 @@ class Meme:
             The rendered matplotlib Figure and Axes.
         """
         template = self._get_template()
-        force_pillow = bool(self._per_line_overrides)
+        # Mirror meme(): memegen can't honour an explicit fontsize or a
+        # custom outline, so any of them forces Pillow under "auto".
+        force_pillow = bool(
+            self._per_line_overrides
+            or self._fontsize is not None
+            or self._outline_color is not None
+            or self._outline_width is not None
+        )
         backend_val = self._backend if self._backend is not None else config["backend"]
         fig, ax_out = render_meme(
             template,
