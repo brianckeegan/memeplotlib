@@ -6,7 +6,10 @@ import argparse
 import sys
 from typing import Any
 
+import requests
+
 from memeplotlib import __version__
+from memeplotlib._template import TemplateNotFoundError
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -51,6 +54,19 @@ def _build_parser() -> argparse.ArgumentParser:
             choices=["upper", "lower", "none"],
             help="Caption text transform.",
         )
+        sp.add_argument(
+            "--outline-color",
+            dest="outline_color",
+            default=None,
+            help="Caption outline color (forces the Pillow backend under 'auto').",
+        )
+        sp.add_argument(
+            "--outline-width",
+            dest="outline_width",
+            type=float,
+            default=None,
+            help="Caption outline width (forces the Pillow backend under 'auto').",
+        )
         sp.add_argument("--fontsize", type=float, default=None, help="Font size in points.")
         sp.add_argument("--dpi", type=int, default=None, help="DPI for the rendered output.")
         sp.add_argument(
@@ -79,6 +95,15 @@ def _build_parser() -> argparse.ArgumentParser:
             help="Custom background URL forwarded to memegen.",
         )
         sp.add_argument(
+            "--alt-text",
+            dest="alt_text",
+            default=None,
+            help=(
+                "Description of the meme for screen-reader users, embedded in "
+                "the saved file (default: generated from the template and captions)."
+            ),
+        )
+        sp.add_argument(
             "--template-style",
             dest="template_style",
             default=None,
@@ -96,14 +121,25 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    if args.command == "list":
-        return _cmd_list()
-    if args.command == "search":
-        return _cmd_search(args.query)
-    if args.command == "info":
-        return _cmd_info(args.template_id)
-    if args.command in ("meme", "create"):
-        return _cmd_meme(args)
+    try:
+        if args.command == "list":
+            return _cmd_list()
+        if args.command == "search":
+            return _cmd_search(args.query)
+        if args.command == "info":
+            return _cmd_info(args.template_id)
+        if args.command in ("meme", "create"):
+            return _cmd_meme(args)
+    except (
+        TemplateNotFoundError,
+        FileNotFoundError,
+        requests.RequestException,
+        ValueError,
+    ) as exc:
+        # Expected failures (bad template ID, missing file, network trouble,
+        # invalid option) get one readable line on stderr, not a traceback.
+        print(f"memeplotlib: error: {exc}", file=sys.stderr)
+        return 1
 
     return 0
 
@@ -142,13 +178,11 @@ def _cmd_search(query: str) -> int:
 
 
 def _cmd_info(template_id: str) -> int:
-    from memeplotlib._template import Template, TemplateNotFoundError
+    from memeplotlib._template import TemplateRegistry
 
-    try:
-        tmpl = Template.from_memegen(template_id)
-    except TemplateNotFoundError:
-        print(f"Template '{template_id}' not found")
-        return 1
+    # Resolve through the registry so the cached catalog is used before
+    # falling back to a direct API lookup.
+    tmpl = TemplateRegistry().get(template_id)
 
     print(f"ID:       {tmpl.id}")
     print(f"Name:     {tmpl.name}")
@@ -173,6 +207,8 @@ def _cmd_meme(args: argparse.Namespace) -> int:
     for key in (
         "font",
         "color",
+        "outline_color",
+        "outline_width",
         "style",
         "fontsize",
         "dpi",
@@ -183,13 +219,19 @@ def _cmd_meme(args: argparse.Namespace) -> int:
         "layout",
         "background",
         "template_style",
+        "alt_text",
     ):
         value = getattr(args, key, None)
         if value is not None:
             kwargs[key] = value
 
-    meme(args.template, *args.lines, **kwargs)
+    from memeplotlib._alt import get_alt_text
+
+    fig, _ = meme(args.template, *args.lines, **kwargs)
     print(f"Saved to {args.out}")
+    alt = get_alt_text(fig)
+    if alt:
+        print(f"Alt text: {alt}")
     return 0
 
 
