@@ -139,3 +139,50 @@ class TestCorruptImageHandling:
 
         result = cache.get_image("https://example.com/corrupt.png")
         assert result is None
+
+
+class TestConfigCacheDir:
+    """``config["cache_dir"]`` must control where an implicit cache writes."""
+
+    def test_config_cache_dir_is_used(self, tmp_path, monkeypatch):
+        from memeplotlib import config
+
+        monkeypatch.setitem(config, "cache_dir", str(tmp_path / "from_config"))
+        cache = TemplateCache()
+        cache.set_catalog([{"id": "x"}])
+        assert (tmp_path / "from_config" / "catalog.json").exists()
+
+    def test_config_change_after_construction_is_honored(self, tmp_path, monkeypatch):
+        # memeplotlib._api builds its cache at import time, so the directory
+        # has to be resolved lazily.
+        from memeplotlib import config
+
+        cache = TemplateCache()
+        monkeypatch.setitem(config, "cache_dir", str(tmp_path / "later"))
+        cache.set_image("https://example.com/a.png", _png_bytes())
+        assert list((tmp_path / "later" / "images").iterdir())
+
+    def test_explicit_dir_wins_over_config(self, tmp_path, monkeypatch):
+        from memeplotlib import config
+
+        monkeypatch.setitem(config, "cache_dir", str(tmp_path / "from_config"))
+        cache = TemplateCache(cache_dir=tmp_path / "explicit")
+        cache.set_catalog([])
+        assert (tmp_path / "explicit" / "catalog.json").exists()
+        assert not (tmp_path / "from_config").exists()
+
+    def test_none_falls_back_to_platform_default(self, monkeypatch):
+        from memeplotlib import _cache, config
+
+        monkeypatch.setitem(config, "cache_dir", None)
+        assert TemplateCache()._cache_dir == _cache._default_cache_dir()
+
+
+def _png_bytes() -> bytes:
+    import io
+
+    from PIL import Image
+
+    buf = io.BytesIO()
+    Image.new("RGBA", (2, 2)).save(buf, format="PNG")
+    return buf.getvalue()
