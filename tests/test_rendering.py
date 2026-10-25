@@ -213,3 +213,33 @@ class TestRenderMemify:
         fig, ax = plt.subplots()
         with pytest.raises(ValueError, match="Invalid position"):
             render_memify(fig, ["text"], position="diagonal")
+
+
+class TestAnimatedMemegenResponses:
+    @staticmethod
+    def _gif(frames):
+        import io
+
+        from PIL import Image
+
+        imgs = [Image.new("RGB", (8, 8), c) for c in frames]
+        buf = io.BytesIO()
+        imgs[0].save(buf, format="GIF", save_all=True, append_images=imgs[1:], duration=50)
+        return buf.getvalue()
+
+    def test_animated_gif_shows_last_frame(self):
+        import io
+
+        import numpy as np
+        from PIL import Image
+
+        from memeplotlib._rendering import _still_frame
+
+        still = Image.open(io.BytesIO(_still_frame(self._gif(["black", "red"])))).convert("RGB")
+        assert tuple(np.array(still)[0, 0]) == (255, 0, 0)
+
+    def test_static_images_pass_through_unchanged(self):
+        from memeplotlib._rendering import _still_frame
+
+        single = self._gif(["blue"])
+        assert _still_frame(single) == single

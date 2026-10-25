@@ -409,8 +409,29 @@ def _figure_for_image(
     return fig, ax
 
 
+def _still_frame(image_bytes: bytes) -> bytes:
+    """Return *image_bytes*, or a PNG of its last frame if it is animated.
+
+    memegen times animated captions (e.g. buzz's lines start at 5% and 50%
+    of the clip), so frame 0 often has no text at all. A matplotlib figure
+    can only show one frame; the last one has every caption visible.
+    """
+    img = Image.open(io.BytesIO(image_bytes))
+    n_frames = getattr(img, "n_frames", 1)
+    if n_frames <= 1:
+        return image_bytes
+    img.seek(n_frames - 1)
+    buf = io.BytesIO()
+    img.convert("RGBA").save(buf, format="PNG")
+    return buf.getvalue()
+
+
 def _fetch_rendered_image(url: str, cache: TemplateCache | None) -> np.ndarray:
-    """Fetch a memegen-rendered image (PNG/JPG/GIF/WebP) as an RGBA array."""
+    """Fetch a memegen-rendered image (PNG/JPG/GIF/WebP) as an RGBA array.
+
+    Animated GIF/WebP responses are reduced to their last frame (see
+    :func:`_still_frame`); the animation is not preserved in the figure.
+    """
     if cache is not None and config["cache_enabled"]:
         cached = cache.get_image(url)
         if cached is not None:
@@ -418,7 +439,7 @@ def _fetch_rendered_image(url: str, cache: TemplateCache | None) -> np.ndarray:
 
     resp = _get_session().get(url, timeout=config["image_timeout"])
     resp.raise_for_status()
-    image_bytes = resp.content
+    image_bytes = _still_frame(resp.content)
     img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
     if cache is not None and config["cache_enabled"]:
