@@ -102,6 +102,7 @@ class TestSearch:
 class TestInfo:
     @responses.activate
     def test_info_prints_metadata(self, capsys):
+        responses.add(responses.GET, f"{API_BASE}/templates/", json=[])
         responses.add(
             responses.GET,
             f"{API_BASE}/templates/buzz",
@@ -122,11 +123,21 @@ class TestInfo:
 
     @responses.activate
     def test_info_unknown_returns_1(self, capsys):
+        responses.add(responses.GET, f"{API_BASE}/templates/", json=[])
         responses.add(responses.GET, f"{API_BASE}/templates/zzz", status=404)
         rc = main(["info", "zzz"])
         assert rc == 1
-        out = capsys.readouterr().out
-        assert "not found" in out
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert captured.err.startswith("memeplotlib: error:")
+        assert "not found" in captured.err
+
+    @responses.activate
+    def test_info_uses_cached_catalog(self, fake_catalog, capsys):
+        # Only the catalog is mocked: info must not need a per-template call.
+        responses.add(responses.GET, f"{API_BASE}/templates/", json=fake_catalog)
+        assert main(["info", "drake"]) == 0
+        assert "Drake Hotline Bling" in capsys.readouterr().out
 
 
 class TestMemeRender:
@@ -217,6 +228,37 @@ class TestVersionFlag:
         assert excinfo.value.code == 0
         out = capsys.readouterr().out
         assert __version__ in out
+
+
+class TestErrors:
+    """Expected failures exit 1 with one line on stderr, never a traceback."""
+
+    @responses.activate
+    def test_unknown_template_for_meme(self, capsys, tmp_path):
+        responses.add(responses.GET, f"{API_BASE}/templates/", json=[])
+        responses.add(responses.GET, f"{API_BASE}/templates/nope", status=404)
+        rc = main(["meme", "nope", "hi", "-o", str(tmp_path / "x.png")])
+        assert rc == 1
+        captured = capsys.readouterr()
+        assert captured.out == ""
+        assert "Traceback" not in captured.err
+        assert captured.err.count("\n") == 1
+
+    def test_missing_image_file(self, capsys, tmp_path):
+        rc = main(["meme", str(tmp_path / "missing.png"), "hi", "-o", str(tmp_path / "x.png")])
+        assert rc == 1
+        assert "not found" in capsys.readouterr().err
+
+    @responses.activate
+    def test_network_error_on_list(self, capsys):
+        import requests
+
+        responses.add(
+            responses.GET, f"{API_BASE}/templates/", body=requests.ConnectionError("offline")
+        )
+        rc = main(["list"])
+        assert rc == 1
+        assert "offline" in capsys.readouterr().err
 
 
 class TestOutlineFlags:

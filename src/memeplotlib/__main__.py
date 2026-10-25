@@ -6,7 +6,10 @@ import argparse
 import sys
 from typing import Any
 
+import requests
+
 from memeplotlib import __version__
+from memeplotlib._template import TemplateNotFoundError
 
 
 def _build_parser() -> argparse.ArgumentParser:
@@ -118,14 +121,25 @@ def main(argv: list[str] | None = None) -> int:
         parser.print_help()
         return 0
 
-    if args.command == "list":
-        return _cmd_list()
-    if args.command == "search":
-        return _cmd_search(args.query)
-    if args.command == "info":
-        return _cmd_info(args.template_id)
-    if args.command in ("meme", "create"):
-        return _cmd_meme(args)
+    try:
+        if args.command == "list":
+            return _cmd_list()
+        if args.command == "search":
+            return _cmd_search(args.query)
+        if args.command == "info":
+            return _cmd_info(args.template_id)
+        if args.command in ("meme", "create"):
+            return _cmd_meme(args)
+    except (
+        TemplateNotFoundError,
+        FileNotFoundError,
+        requests.RequestException,
+        ValueError,
+    ) as exc:
+        # Expected failures (bad template ID, missing file, network trouble,
+        # invalid option) get one readable line on stderr, not a traceback.
+        print(f"memeplotlib: error: {exc}", file=sys.stderr)
+        return 1
 
     return 0
 
@@ -164,13 +178,11 @@ def _cmd_search(query: str) -> int:
 
 
 def _cmd_info(template_id: str) -> int:
-    from memeplotlib._template import Template, TemplateNotFoundError
+    from memeplotlib._template import TemplateRegistry
 
-    try:
-        tmpl = Template.from_memegen(template_id)
-    except TemplateNotFoundError:
-        print(f"Template '{template_id}' not found")
-        return 1
+    # Resolve through the registry so the cached catalog is used before
+    # falling back to a direct API lookup.
+    tmpl = TemplateRegistry().get(template_id)
 
     print(f"ID:       {tmpl.id}")
     print(f"Name:     {tmpl.name}")
