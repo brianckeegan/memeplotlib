@@ -17,7 +17,10 @@ in matplotlib via ``ax.imshow``.
 
 from __future__ import annotations
 
+import os
+import sys
 import textwrap
+import warnings
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -175,6 +178,31 @@ def _fit_font_to_box(
     return font, wrapped
 
 
+_PACKAGE_DIR = os.path.join(str(Path(__file__).parent), "")
+
+
+def warn_unfittable(text: str) -> None:
+    """Warn that caption *text* overflows its box even at the minimum font size.
+
+    The warning is attributed to the first stack frame outside memeplotlib,
+    so it points at the user's ``meme()`` / ``Meme.render()`` call however
+    deep the rendering pipeline is.
+    """
+    stacklevel = 2  # level 2 is our caller, i.e. sys._getframe(1)
+    frame = sys._getframe(1)
+    while frame is not None and frame.f_code.co_filename.startswith(_PACKAGE_DIR):
+        frame = frame.f_back  # type: ignore[assignment]
+        stacklevel += 1
+    preview = text if len(text) <= 40 else text[:37] + "..."
+    warnings.warn(
+        f"Caption {preview!r} does not fit its text box even at the minimum "
+        f"font size; it may be unreadable. Shorten the text or use a template "
+        f"with more room.",
+        UserWarning,
+        stacklevel=stacklevel,
+    )
+
+
 def _draw_caption(
     img: Image.Image,
     text: str,
@@ -209,6 +237,8 @@ def _draw_caption(
     )
 
     text_w, text_h = _measure(pil_font, wrapped)
+    if text_w > box_w or text_h > box_h:
+        warn_unfittable(text)
 
     if pos.align == "left":
         anchor_x = box_x
