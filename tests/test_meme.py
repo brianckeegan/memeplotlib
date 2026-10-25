@@ -99,6 +99,35 @@ class TestMemeRender:
         assert m._fig is not None
 
 
+class TestEditsAfterRender:
+    """Edits made after a render must show up in the next save()/show()."""
+
+    def test_save_after_edit_rerenders(self, sample_template, tmp_path):
+        m = Meme(sample_template, "first", "draft")
+        m.render()
+        m.bottom("final")
+        m.save(tmp_path / "out.png")
+        texts = [t.get_text() for t in m._ax.texts]
+        assert "FINAL" in texts
+        assert "DRAFT" not in texts
+
+    @pytest.mark.parametrize(
+        "edit",
+        [
+            lambda m: m.top("x"),
+            lambda m: m.bottom("x"),
+            lambda m: m.text(2, "x"),
+            lambda m: m.line(0, "x", color="red"),
+            lambda m: m.with_backend("pillow"),
+        ],
+    )
+    def test_every_mutator_invalidates(self, sample_template, edit):
+        m = Meme(sample_template, "a", "b")
+        m.render()
+        assert edit(m) is m  # still chainable
+        assert m._fig is None
+
+
 class TestMemeForcesPillow:
     """``Meme`` must route client-only knobs to Pillow, exactly like ``meme()``."""
 
