@@ -113,6 +113,11 @@ class Meme:
             self._template = _resolve_template(self._template_str)
         return self._template
 
+    def _invalidate(self) -> None:
+        """Drop the cached render so the next show()/save() reflects edits."""
+        self._fig = None
+        self._ax = None
+
     def top(self, text: str) -> Meme:
         """Set the top text line (index 0).
 
@@ -130,6 +135,7 @@ class Meme:
             self._lines.append(text)
         else:
             self._lines[0] = text
+        self._invalidate()
         return self
 
     def bottom(self, text: str) -> Meme:
@@ -148,6 +154,7 @@ class Meme:
         while len(self._lines) < 2:
             self._lines.append("")
         self._lines[1] = text
+        self._invalidate()
         return self
 
     def text(self, index: int, text: str) -> Meme:
@@ -168,6 +175,7 @@ class Meme:
         while len(self._lines) <= index:
             self._lines.append("")
         self._lines[index] = text
+        self._invalidate()
         return self
 
     def line(
@@ -217,6 +225,7 @@ class Meme:
             override["position"] = position
         if override:
             self._per_line_overrides[index] = override
+        self._invalidate()
         return self
 
     def with_backend(self, backend: str) -> Meme:
@@ -233,6 +242,7 @@ class Meme:
             Self, for method chaining.
         """
         self._backend = backend
+        self._invalidate()
         return self
 
     def render(
