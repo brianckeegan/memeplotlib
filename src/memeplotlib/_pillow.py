@@ -17,6 +17,7 @@ in matplotlib via ``ax.imshow``.
 
 from __future__ import annotations
 
+import functools
 import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -62,8 +63,12 @@ _FIT_SHRINK_FACTOR = 0.92
 _WRAP_BASE_CHARS = 28
 
 
+@functools.lru_cache(maxsize=64)
 def _resolve_font_path(font: str) -> Path:
     """Find a TTF file for *font*. Falls back to the bundled Anton font.
+
+    Cached: an unknown font otherwise re-walks every system font directory
+    (with a one-level glob) for every caption drawn.
 
     Parameters
     ----------
@@ -104,13 +109,20 @@ def _resolve_font_path(font: str) -> Path:
     )
 
 
+@functools.lru_cache(maxsize=256)
+def _load_font(font_path: Path, size: int) -> ImageFont.FreeTypeFont:
+    """Load *font_path* at *size*, cached so fit loops don't re-parse the TTF."""
+    return ImageFont.truetype(str(font_path), size=size)
+
+
+# A 1x1 scratch canvas used only for text measurement. textbbox doesn't
+# draw, so one shared instance is enough.
+_MEASURE_DRAW = ImageDraw.Draw(Image.new("RGBA", (1, 1)))
+
+
 def _measure(font: ImageFont.FreeTypeFont, text: str) -> tuple[int, int]:
     """Return ``(width, height)`` of *text* rendered with *font*."""
-    # Pillow ≥ 9.2 exposes `getbbox` which is multiline-aware via `Draw.textbbox`.
-    # For consistency we rasterise into a throwaway draw and use textbbox.
-    dummy = Image.new("RGBA", (1, 1))
-    draw = ImageDraw.Draw(dummy)
-    bbox = draw.multiline_textbbox((0, 0), text, font=font, align="center")
+    bbox = _MEASURE_DRAW.multiline_textbbox((0, 0), text, font=font, align="center")
     return int(bbox[2] - bbox[0]), int(bbox[3] - bbox[1])
 
 
@@ -159,7 +171,7 @@ def _fit_font_to_box(
     """
     box_w, box_h = box
     size = max(_FIT_MIN_FONTSIZE, int(initial))
-    font = ImageFont.truetype(str(font_path), size=size)
+    font = _load_font(font_path, size)
     wrapped = _wrap_for_box(text, font, box_w)
 
     for _ in range(_FIT_MAX_ITERATIONS):
@@ -169,7 +181,7 @@ def _fit_font_to_box(
         if size <= _FIT_MIN_FONTSIZE:
             return font, wrapped
         size = max(_FIT_MIN_FONTSIZE, int(size * _FIT_SHRINK_FACTOR))
-        font = ImageFont.truetype(str(font_path), size=size)
+        font = _load_font(font_path, size)
         wrapped = _wrap_for_box(text, font, box_w)
 
     return font, wrapped

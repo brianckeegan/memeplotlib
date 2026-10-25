@@ -213,3 +213,20 @@ class TestRenderMemify:
         fig, ax = plt.subplots()
         with pytest.raises(ValueError, match="Invalid position"):
             render_memify(fig, ["text"], position="diagonal")
+
+
+class TestPillowFontCaching:
+    def test_font_path_lookup_is_cached(self):
+        from memeplotlib._pillow import _resolve_font_path
+
+        _resolve_font_path.cache_clear()
+        first = _resolve_font_path("no-such-font-anywhere")
+        assert _resolve_font_path("no-such-font-anywhere") == first
+        assert _resolve_font_path.cache_info().hits == 1
+
+    def test_loaded_fonts_are_reused(self):
+        from memeplotlib._pillow import _load_font, _resolve_font_path
+
+        path = _resolve_font_path("anton")
+        assert _load_font(path, 40) is _load_font(path, 40)
+        assert _load_font(path, 40) is not _load_font(path, 41)
