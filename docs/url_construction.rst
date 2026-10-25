@@ -143,12 +143,14 @@ Notes for automated clients
 
 - Bootstrap with ``GET /templates/`` once and cache. Per-template metadata
   (``Template.from_memegen``) hits ``GET /templates/<id>``.
-- ``Template.example`` is the canonical "guaranteed-valid URL" smoke test
-  — useful for asserting that a template id is live without composing a
-  caption yourself.
-- Memegen normalises raw POSTed text to the escape forms above and returns
-  the canonical URL. ``memeplotlib`` performs the same encoding locally
-  via :func:`encode_text_for_url`.
+- ``Template.example`` holds the template's sample caption text (the API's
+  ``example.text``). The API record's ``example.url`` (not stored by
+  ``memeplotlib``) is memegen's guaranteed-valid render URL — useful as a
+  smoke test that a template ID is live.
+- Memegen's guide now recommends that clients ``POST /images`` and use the
+  canonical URL it returns; its escape table lives in the upstream README.
+  ``memeplotlib`` still builds URLs locally via
+  :func:`~memeplotlib._text.encode_text_for_url`.
 - Behaviour when ``lines`` exceeds ``Template.lines_count``: extra path
   segments are ignored by memegen. ``memeplotlib`` does not pre-truncate;
   pass exactly the slots you intend.
