@@ -264,3 +264,46 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestStyleRouting:
+    def _tmpl(self):
+        return Template(id="buzz", name="buzz", image_url="https://x/b.png", is_memegen=True)
+
+    @pytest.mark.parametrize("style", ["lower", "none"])
+    def test_auto_routes_non_upper_style_to_pillow(self, style):
+        chosen = _select_backend(
+            "auto",
+            self._tmpl(),
+            font="impact",
+            force_pillow=False,
+            text_kwargs={},
+            per_line_overrides=None,
+            style=style,
+        )
+        assert chosen == "pillow"
+
+    def test_auto_keeps_memegen_for_upper(self):
+        chosen = _select_backend(
+            "auto",
+            self._tmpl(),
+            font="impact",
+            force_pillow=False,
+            text_kwargs={},
+            per_line_overrides=None,
+            style="upper",
+        )
+        assert chosen == "memegen"
+
+    def test_explicit_memegen_with_lower_style_warns(self):
+        with pytest.warns(UserWarning, match="own text casing"):
+            chosen = _select_backend(
+                "memegen",
+                self._tmpl(),
+                font="impact",
+                force_pillow=False,
+                text_kwargs={},
+                per_line_overrides=None,
+                style="none",
+            )
+        assert chosen == "memegen"
