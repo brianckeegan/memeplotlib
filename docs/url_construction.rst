@@ -60,9 +60,10 @@ Every parameter below is optional. ``memeplotlib`` only emits a query
 string when at least one parameter is supplied.
 
 ================  ================================================================
-``style=``        Template-specific style name (e.g. ``maga`` for ``ds``) **or** an
-                  arbitrary image URL for an ad-hoc overlay. May appear multiple
-                  times when overlays are stacked.
+``style=``        Template-specific style name (e.g. ``maga`` for ``ds``) **or**
+                  one or more overlay image URLs joined with commas. Sent
+                  once: memegen reads only the first ``style=`` value, and
+                  it cannot mix a style name with overlay URLs.
 ``font=``         Memegen font alias. The closed set
                   (:data:`memeplotlib._url.MEMEGEN_FONT_ALIASES`) is
                   ``impact``, ``thick``, ``thin``, ``tiny``, ``comic``,
@@ -74,9 +75,9 @@ string when at least one parameter is supplied.
 ``height=``       Output height in pixels.
 ``layout=``       Alternate layout (e.g. ``top``).
 ``background=``   Custom background URL. Composes with ``style=<url>`` overlays.
-``center=``       ``"x,y"`` overlay anchor (``[0, 1]`` floats). Paired with an
-                  ``style=`` overlay.
-``scale=``        Overlay scale factor. Paired with an ``style=`` overlay.
+``center=``       ``"x,y"`` overlay anchor (``[0, 1]`` floats). Applies to
+                  the first overlay only.
+``scale=``        Overlay scale factor. Applies to the first overlay only.
 ================  ================================================================
 
 Output formats
