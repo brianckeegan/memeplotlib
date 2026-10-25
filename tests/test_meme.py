@@ -96,3 +96,39 @@ class TestMemeRender:
         m.show()
         plt.show.assert_called_once()  # type: ignore[attr-defined]
         assert m._fig is not None
+
+
+class TestLineOutlineAndStyleOverrides:
+    def test_overrides_are_recorded_and_chainable(self, sample_template):
+        m = Meme(sample_template, "a", "b")
+        assert m.line(1, "b", outline_color="white", outline_width=5, style="none") is m
+        assert m._per_line_overrides[1] == {
+            "outline_color": "white",
+            "outline_width": 5,
+            "style": "none",
+        }
+
+    def test_pillow_applies_per_line_outline_and_style(self, monkeypatch, sample_image):
+        import memeplotlib._pillow as pil
+        from memeplotlib._template import DEFAULT_TEXT_POSITIONS
+
+        calls: list[dict] = []
+        monkeypatch.setattr(pil, "_draw_caption", lambda img, text, pos, **kw: calls.append(kw))
+        pil.render_pillow(
+            sample_image,
+            ["top", "bottom"],
+            list(DEFAULT_TEXT_POSITIONS),
+            font="impact",
+            color="white",
+            outline_color="black",
+            outline_width=2.0,
+            fontsize=None,
+            style="upper",
+            per_line_overrides={
+                1: {"outline_color": "white", "outline_width": 5, "style": "none"}
+            },
+        )
+        assert calls[0]["outline_color"] == "black" and calls[0]["style"] == "upper"
+        assert calls[1]["outline_color"] == "white"
+        assert calls[1]["outline_width"] == 5.0
+        assert calls[1]["style"] == "none"
