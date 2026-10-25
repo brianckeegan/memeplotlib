@@ -110,7 +110,7 @@ class TestMemeForcesPillow:
 
         def fake_render_meme(template, lines, **kwargs):
             calls.append(kwargs)
-            return None, None
+            return plt.subplots()
 
         monkeypatch.setattr(meme_mod, "render_meme", fake_render_meme)
         return calls
