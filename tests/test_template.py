@@ -286,3 +286,45 @@ class TestSessionReuse:
         t.start()
         t.join()
         assert seen[0] is not main
+
+
+class TestStylesFilter:
+    def test_config_artifacts_are_dropped(self):
+        tmpl = Template._from_api_data(
+            {
+                "id": "buzz",
+                "name": "Buzz",
+                "lines": 2,
+                "styles": ["default", "config.528cef87abc", "animated", 3],
+            },
+            "https://api.memegen.link",
+        )
+        assert tmpl.styles == ["default", "animated"]
+
+
+class TestTemplateNotFoundErrorApi:
+    def test_public_exports(self):
+        import memeplotlib
+        from memeplotlib._template import TemplateNotFoundError as Private
+        from memeplotlib._template import TextPosition as PrivateTP
+
+        assert memeplotlib.TemplateNotFoundError is Private
+        assert memeplotlib.TextPosition is PrivateTP
+        assert {"TemplateNotFoundError", "TextPosition"} <= set(memeplotlib.__all__)
+
+    def test_is_lookup_error(self):
+        import memeplotlib
+
+        assert issubclass(memeplotlib.TemplateNotFoundError, LookupError)
+
+    @responses.activate
+    def test_message_says_how_to_search(self):
+        import memeplotlib
+
+        responses.add(responses.GET, "https://api.memegen.link/templates/buz", status=404)
+        with pytest.raises(memeplotlib.TemplateNotFoundError) as excinfo:
+            memeplotlib.Template.from_memegen("buz")
+        message = str(excinfo.value)
+        assert "'buz' not found" in message
+        assert "TemplateRegistry().search('buz')" in message
+        assert "memeplotlib search buz" in message

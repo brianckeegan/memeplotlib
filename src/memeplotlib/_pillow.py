@@ -266,7 +266,8 @@ def render_pillow(
     per_line_overrides : dict, optional
         Mapping of ``line_index → {field: value}`` to override styling
         on a per-slot basis. Supported fields: ``font``, ``color``,
-        ``fontsize``, ``position``.
+        ``fontsize``, ``position``, ``outline_color``, ``outline_width``,
+        ``style``.
 
     Returns
     -------
@@ -289,6 +290,10 @@ def render_pillow(
         eff_fontsize: float | None = None if raw_fs is None else float(raw_fs)  # type: ignore[arg-type]
         pos_override = line_override.get("position")
         eff_pos = pos_override if isinstance(pos_override, TextPosition) else positions[i]
+        eff_outline_color = str(line_override.get("outline_color", outline_color))
+        raw_ow = line_override.get("outline_width", outline_width)
+        eff_outline_width = float(raw_ow)  # type: ignore[arg-type]
+        eff_style = str(line_override.get("style", style))
 
         _draw_caption(
             img,
@@ -296,10 +301,10 @@ def render_pillow(
             eff_pos,
             font=eff_font,
             color=eff_color,
-            outline_color=outline_color,
-            outline_width=outline_width,
+            outline_color=eff_outline_color,
+            outline_width=eff_outline_width,
             fontsize=eff_fontsize,
-            style=style,
+            style=eff_style,
         )
 
     return np.array(img)
