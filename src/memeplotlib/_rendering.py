@@ -33,7 +33,7 @@ from matplotlib.font_manager import FontProperties, findfont, fontManager
 from PIL import Image
 
 from memeplotlib._cache import TemplateCache
-from memeplotlib._config import DEFAULT_FIGSIZE_WIDTH, config
+from memeplotlib._config import DEFAULT_FIGSIZE_WIDTH, DEFAULT_FONT, config
 from memeplotlib._pillow import render_pillow
 from memeplotlib._template import (
     DEFAULT_TEXT_POSITIONS,
@@ -451,7 +451,8 @@ def _render_via_memegen(
     # encoding so memegen receives the final visible string.
     transformed = [apply_style(line, style) if line else line for line in lines]
 
-    memegen_font = memegen_font_for(font)
+    # "" means "template default": omit the parameter entirely.
+    memegen_font = memegen_font_for(font) or None
     url = build_memegen_url(
         template.id,
         transformed,
@@ -663,13 +664,18 @@ def render_meme(
     )
 
     if chosen == "memegen":
+        # memegen templates each have designed fonts (mostly "thick"); only
+        # override them when the caller chose a font, either per call or by
+        # changing config["font"] from its default.
+        use_template_font = font is None and config["font"] == DEFAULT_FONT
+        memegen_font = "default" if use_template_font else font_val
         return _render_via_memegen(
             template,
             lines,
             ax=ax,
             figsize=figsize,
             dpi=dpi_val,
-            font=font_val,
+            font=memegen_font,
             color=color_val,
             style=style_val,
             extension=extension_val,

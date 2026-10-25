@@ -264,3 +264,34 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestMemegenFontDefault:
+    """memegen renders keep each template's designed font unless asked."""
+
+    def _render(self, fake_png_bytes, **kwargs):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", "b", backend="memegen", **kwargs)
+        return [str(c.request.url) for c in responses.calls if "/images/buzz/" in c.request.url][0]
+
+    @responses.activate
+    def test_default_font_is_not_sent(self, buzz_metadata_response, fake_png_bytes):
+        assert "font=" not in self._render(fake_png_bytes)
+
+    @responses.activate
+    def test_explicit_font_is_sent(self, buzz_metadata_response, fake_png_bytes):
+        assert "font=impact" in self._render(fake_png_bytes, font="impact")
+
+    @responses.activate
+    def test_config_font_change_is_sent(self, buzz_metadata_response, fake_png_bytes, monkeypatch):
+        monkeypatch.setitem(memes.config, "font", "comic")
+        assert "font=comic" in self._render(fake_png_bytes)
+
+    @responses.activate
+    def test_font_default_keyword_sends_nothing(self, buzz_metadata_response, fake_png_bytes):
+        assert "font=" not in self._render(fake_png_bytes, font="default")

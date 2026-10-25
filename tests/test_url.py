@@ -125,8 +125,19 @@ class TestMemegenFontFor:
     def test_case_insensitive(self):
         assert memegen_font_for("Comic") == "comic"
 
-    def test_default_alias(self):
-        assert memegen_font_for("default") == "impact"
+    def test_default_means_template_font(self):
+        # "" = send no font= so each template keeps its designed font.
+        assert memegen_font_for("default") == ""
+
+    @pytest.mark.parametrize(
+        "font", ["thick", "titilliumweb", "thin", "tiny", "segoe", "kalam", "hgminchob"]
+    )
+    def test_live_upstream_fonts_are_known(self, font):
+        assert memegen_font_for(font) == font
+
+    def test_tw_is_not_a_memegen_font(self):
+        # memegen returns 422 for font=tw.
+        assert memegen_font_for("tw") is None
 
     def test_unknown_font_returns_none(self):
         assert memegen_font_for("arial") is None
