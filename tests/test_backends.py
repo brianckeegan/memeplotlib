@@ -264,3 +264,34 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestMemegen422Fallback:
+    @responses.activate
+    def test_422_falls_back_to_pillow(self, buzz_metadata_response, fake_png_bytes):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            status=422,
+            content_type="image/png",
+        )
+        responses.add(
+            responses.GET,
+            f"{API_BASE}/images/buzz.png",
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        with pytest.warns(UserWarning, match="422") as record:
+            fig, ax = meme("buzz", "a", "b", backend="memegen", template_style="nope")
+        assert record[0].filename == __file__
+        # The blank was fetched for the client-side render.
+        assert any(str(c.request.url).endswith("/images/buzz.png") for c in responses.calls)
+
+    @responses.activate
+    def test_other_errors_still_raise(self, buzz_metadata_response):
+        import requests
+
+        responses.add(responses.GET, memegen_rendered_pattern("buzz"), status=404)
+        with pytest.raises(requests.HTTPError):
+            meme("buzz", "a", "b", backend="memegen")

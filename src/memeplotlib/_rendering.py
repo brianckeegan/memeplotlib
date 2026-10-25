@@ -28,6 +28,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 import matplotlib.pyplot as plt
 import numpy as np
+import requests
 from matplotlib import patheffects
 from matplotlib.font_manager import FontProperties, findfont, fontManager
 from PIL import Image
@@ -663,24 +664,38 @@ def render_meme(
     )
 
     if chosen == "memegen":
-        return _render_via_memegen(
-            template,
-            lines,
-            ax=ax,
-            figsize=figsize,
-            dpi=dpi_val,
-            font=font_val,
-            color=color_val,
-            style=style_val,
-            extension=extension_val,
-            width=width_val,
-            height=height_val,
-            layout=layout_val,
-            background=background_val,
-            overlays=overlays,
-            template_style=template_style,
-            cache=cache,
-        )
+        try:
+            return _render_via_memegen(
+                template,
+                lines,
+                ax=ax,
+                figsize=figsize,
+                dpi=dpi_val,
+                font=font_val,
+                color=color_val,
+                style=style_val,
+                extension=extension_val,
+                width=width_val,
+                height=height_val,
+                layout=layout_val,
+                background=background_val,
+                overlays=overlays,
+                template_style=template_style,
+                cache=cache,
+            )
+        except requests.HTTPError as exc:
+            # memegen answers an invalid customization (unknown font or
+            # style, bad color, tiny width...) with 422 plus a default
+            # render. Render it client-side instead of failing outright.
+            if exc.response is None or exc.response.status_code != 422:
+                raise
+            warnings.warn(
+                f"memegen rejected the request ({exc.response.url}) with 422 "
+                f"Unprocessable Entity; rendering with the Pillow backend instead.",
+                UserWarning,
+                stacklevel=3,
+            )
+            chosen = "pillow"
 
     if chosen == "pillow":
         return _render_via_pillow(
