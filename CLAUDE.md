@@ -163,10 +163,12 @@ memeplotlib-mcp   # reads JSON-RPC on stdin
 - **`responses` doesn't model timeout / connection errors** — use
   `pytest-httpserver` for retry-and-timeout tests, opt out of the global
   socket block with `@pytest.mark.allow_network`.
-- **`cache_enabled = True` in tests will read from the user's real
-  cache directory.** Tests touching the registry should
-  `monkeypatch.setitem(config, "cache_enabled", False)` and supply a
-  `tmp_path` cache dir. `Template.get_image()` honours
+- **`config["cache_dir"]` is resolved lazily** by `TemplateCache` when
+  no explicit `cache_dir` is passed. The autouse `_isolated_cache_dir`
+  fixture in `tests/conftest.py` points it at `tmp_path`, so tests never
+  touch the user's real cache. Tests touching the registry should still
+  `monkeypatch.setitem(config, "cache_enabled", False)` when they need
+  a guaranteed cache miss. `Template.get_image()` honours
   `config["cache_enabled"]` so disabling at the config level is
   sufficient — you do not also need to construct a fresh `TemplateCache`.
 - **memegen rendered URLs are dynamic** — the path embeds caption text,
