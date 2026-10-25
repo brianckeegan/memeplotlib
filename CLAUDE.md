@@ -83,8 +83,11 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
 - HTTP responses are mocked with `responses`. For retry / timeout
   behavior `responses` cannot model, use `pytest-httpserver`.
 - Image-comparison tests use `pytest-mpl` with baselines under
-  `tests/baseline/`. Regenerate with
-  `pytest --mpl-generate-path=tests/baseline`.
+  `tests/baseline/` (matplotlib >= 3.11) and
+  `tests/baseline/mpl-pre-3.11/` (older matplotlib, which Python 3.10 CI
+  still installs; text extents differ). Regenerate with
+  `pytest --mpl-generate-path=tests/baseline`, or
+  `.../tests/baseline/mpl-pre-3.11` under matplotlib < 3.11.
 - Coverage gate: `fail_under = 85` (currently ~94%).
 
 ## Definitions of done
