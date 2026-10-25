@@ -191,7 +191,9 @@ class Template:
         except (TypeError, ValueError):
             overlays_count = 0
         styles_raw = data.get("styles", []) or []
-        styles = [str(s) for s in styles_raw if isinstance(s, str)]
+        # memegen's catalog sometimes leaks cache artifacts named
+        # "config.<hash>" into `styles`; they are not usable style names.
+        styles = [s for s in styles_raw if isinstance(s, str) and not s.startswith("config.")]
 
         if lines_count <= 2:
             text_positions = list(DEFAULT_TEXT_POSITIONS)
