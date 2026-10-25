@@ -17,9 +17,26 @@ from urllib3.util.retry import Retry
 from memeplotlib._cache import TemplateCache, default_cache
 from memeplotlib._config import IMAGE_EXTENSIONS, config
 
+_session_local = threading.local()
+
 
 def _get_session() -> requests.Session:
-    """Create a requests session with retry logic from config."""
+    """Return this thread's requests session, with retry logic from config.
+
+    Sessions are reused so consecutive requests share pooled connections
+    (no fresh TCP + TLS handshake per request). One session is kept per
+    thread because ``requests.Session`` is not documented as thread-safe,
+    and it is rebuilt whenever the retry settings in ``config`` change.
+    """
+    key = (config["max_retries"], config["retry_backoff"])
+    cached: tuple[tuple[int, float], requests.Session] | None = getattr(
+        _session_local, "entry", None
+    )
+    if cached is not None and cached[0] == key:
+        return cached[1]
+    if cached is not None:
+        cached[1].close()
+
     session = requests.Session()
     retry = Retry(
         total=config["max_retries"],
@@ -29,11 +46,24 @@ def _get_session() -> requests.Session:
     adapter = HTTPAdapter(max_retries=retry)
     session.mount("https://", adapter)
     session.mount("http://", adapter)
+    _session_local.entry = (key, session)
     return session
 
 
-class TemplateNotFoundError(Exception):
-    """Raised when a template ID is not found in the memegen API."""
+class TemplateNotFoundError(LookupError):
+    """Raised when a template ID is not found in the memegen API.
+
+    Subclasses :class:`LookupError`, so generic "not found" handling (and
+    any existing ``except Exception``) catches it.
+    """
+
+
+def _not_found(template_id: str) -> TemplateNotFoundError:
+    return TemplateNotFoundError(
+        f"Template {template_id!r} not found. Search with "
+        f"memeplotlib.TemplateRegistry().search({template_id!r}) or "
+        f"`memeplotlib search {template_id}`."
+    )
 
 
 @dataclass(frozen=True)
@@ -166,7 +196,7 @@ class Template:
         resp = _get_session().get(url, timeout=config["api_timeout"])
 
         if resp.status_code == 404:
-            raise TemplateNotFoundError(f"Template '{template_id}' not found")
+            raise _not_found(template_id)
         resp.raise_for_status()
 
         data = resp.json()
@@ -191,7 +221,9 @@ class Template:
         except (TypeError, ValueError):
             overlays_count = 0
         styles_raw = data.get("styles", []) or []
-        styles = [str(s) for s in styles_raw if isinstance(s, str)]
+        # memegen's catalog sometimes leaks cache artifacts named
+        # "config.<hash>" into `styles`; they are not usable style names.
+        styles = [s for s in styles_raw if isinstance(s, str) and not s.startswith("config.")]
 
         if lines_count <= 2:
             text_positions = list(DEFAULT_TEXT_POSITIONS)

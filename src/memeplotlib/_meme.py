@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 
+from memeplotlib._alt import default_meme_alt_text, savefig_metadata, set_alt_text
 from memeplotlib._cache import default_cache
 from memeplotlib._config import config
 from memeplotlib._rendering import render_meme
@@ -34,16 +35,22 @@ class Meme:
     color : str or None, optional
         Text fill color.
     outline_color : str or None, optional
-        Text outline color.
+        Text outline color. Forces the Pillow backend under
+        ``backend="auto"``, since memegen renders a hard-coded black stroke.
     outline_width : float or None, optional
-        Outline stroke width.
+        Outline stroke width. Forces the Pillow backend under
+        ``backend="auto"``.
     fontsize : float or None, optional
-        Font size in points.
+        Font size in points. Forces the Pillow backend under
+        ``backend="auto"`` (memegen always auto-fits).
     style : str or None, optional
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
     backend : str or None, optional
         Override the rendering backend (``"auto"``, ``"memegen"``,
         ``"pillow"``, ``"matplotlib"``). ``None`` uses ``config["backend"]``.
+    alt_text : str or None, optional
+        Text alternative for screen-reader users. ``None`` generates one
+        from the template name and captions; see :attr:`alt_text`.
 
     Examples
     --------
@@ -78,6 +85,7 @@ class Meme:
         background: str | None = None,
         overlays: Sequence[OverlaySpec] | None = None,
         template_style: str | None = None,
+        alt_text: str | None = None,
     ):
         self._template_str: str | None = None
         self._template: Template | None = None
@@ -102,6 +110,7 @@ class Meme:
         self._background = background
         self._overlays = list(overlays) if overlays else None
         self._template_style = template_style
+        self._alt_text = alt_text
         self._per_line_overrides: dict[int, dict[str, object]] = {}
         self._fig: Figure | None = None
         self._ax: Axes | None = None
@@ -112,6 +121,11 @@ class Meme:
             assert self._template_str is not None  # set by __init__ when _template is None
             self._template = _resolve_template(self._template_str)
         return self._template
+
+    def _invalidate(self) -> None:
+        """Drop the cached render so the next show()/save() reflects edits."""
+        self._fig = None
+        self._ax = None
 
     def top(self, text: str) -> Meme:
         """Set the top text line (index 0).
@@ -130,6 +144,7 @@ class Meme:
             self._lines.append(text)
         else:
             self._lines[0] = text
+        self._invalidate()
         return self
 
     def bottom(self, text: str) -> Meme:
@@ -148,6 +163,7 @@ class Meme:
         while len(self._lines) < 2:
             self._lines.append("")
         self._lines[1] = text
+        self._invalidate()
         return self
 
     def text(self, index: int, text: str) -> Meme:
@@ -168,6 +184,7 @@ class Meme:
         while len(self._lines) <= index:
             self._lines.append("")
         self._lines[index] = text
+        self._invalidate()
         return self
 
     def line(
@@ -179,11 +196,14 @@ class Meme:
         color: str | None = None,
         font: str | None = None,
         position: TextPosition | None = None,
+        outline_color: str | None = None,
+        outline_width: float | None = None,
+        style: str | None = None,
     ) -> Meme:
         """Set text and per-line styling overrides for a single slot.
 
-        Passing any of ``fontsize``, ``color``, ``font``, or ``position``
-        forces the Pillow backend on render (memegen has no equivalent).
+        Passing any styling override forces the Pillow backend on render
+        (memegen has no per-line equivalent).
 
         Parameters
         ----------
@@ -199,6 +219,14 @@ class Meme:
             Override font family for this slot.
         position : TextPosition, optional
             Override the text-box position metadata for this slot.
+        outline_color : str, optional
+            Override the outline colour for this slot (e.g. a white outline
+            for a caption over a dark region).
+        outline_width : float, optional
+            Override the outline width for this slot.
+        style : str, optional
+            Override the text transform for this slot -- ``"upper"``,
+            ``"lower"``, or ``"none"``.
 
         Returns
         -------
@@ -215,8 +243,15 @@ class Meme:
             override["font"] = font
         if position is not None:
             override["position"] = position
+        if outline_color is not None:
+            override["outline_color"] = outline_color
+        if outline_width is not None:
+            override["outline_width"] = outline_width
+        if style is not None:
+            override["style"] = style
         if override:
             self._per_line_overrides[index] = override
+        self._invalidate()
         return self
 
     def with_backend(self, backend: str) -> Meme:
@@ -233,7 +268,37 @@ class Meme:
             Self, for method chaining.
         """
         self._backend = backend
+        self._invalidate()
         return self
+
+    def with_alt_text(self, text: str | None) -> Meme:
+        """Set (or, with ``None``, reset to the generated default) the alt text.
+
+        Parameters
+        ----------
+        text : str or None
+            Description of the meme for screen-reader users.
+
+        Returns
+        -------
+        Meme
+            Self, for method chaining.
+        """
+        self._alt_text = text
+        if self._ax is not None:
+            set_alt_text(self._ax, self.alt_text)
+        return self
+
+    @property
+    def alt_text(self) -> str:
+        """The alt text for this meme: explicit, or generated from its captions.
+
+        Generating the default resolves the template (which may require a
+        network request for memegen IDs).
+        """
+        if self._alt_text is not None:
+            return self._alt_text
+        return default_meme_alt_text(self._get_template(), self._lines)
 
     def render(
         self,
@@ -258,7 +323,14 @@ class Meme:
             The rendered matplotlib Figure and Axes.
         """
         template = self._get_template()
-        force_pillow = bool(self._per_line_overrides)
+        # Mirror meme(): memegen can't honour an explicit fontsize or a
+        # custom outline, so any of them forces Pillow under "auto".
+        force_pillow = bool(
+            self._per_line_overrides
+            or self._fontsize is not None
+            or self._outline_color is not None
+            or self._outline_width is not None
+        )
         backend_val = self._backend if self._backend is not None else config["backend"]
         fig, ax_out = render_meme(
             template,
@@ -284,6 +356,7 @@ class Meme:
             force_pillow=force_pillow,
             per_line_overrides=self._per_line_overrides or None,
         )
+        set_alt_text(ax_out, self.alt_text)
         self._fig = fig
         self._ax = ax_out
         return fig, ax_out
@@ -309,11 +382,16 @@ class Meme:
             Dots per inch for the saved image.
         **kwargs
             Additional keyword arguments passed to
-            :meth:`matplotlib.figure.Figure.savefig`.
+            :meth:`matplotlib.figure.Figure.savefig`. The alt text is
+            embedded as PNG/SVG ``Description`` (PDF ``Subject``) metadata;
+            entries in a ``metadata`` kwarg take precedence.
         """
         if self._fig is None:
             self.render(dpi=dpi)
         assert self._fig is not None  # render() always assigns self._fig
+        metadata = {**savefig_metadata(path, self.alt_text), **kwargs.pop("metadata", {})}
+        if metadata:
+            kwargs["metadata"] = metadata
         self._fig.savefig(
             str(path),
             dpi=dpi if dpi is not None else config["dpi"],
