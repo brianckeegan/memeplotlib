@@ -36,6 +36,7 @@ Contents
 
    tutorial
    user_guide
+   cli
    url_construction
    conventions
    api

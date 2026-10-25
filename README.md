@@ -38,7 +38,7 @@ fig, ax = memes.meme("buzz", "memes", "memes everywhere")
 fig.savefig("buzz.png")
 ```
 
-![buzz meme example](docs/_static/examples/readme_buzz_basic.png)
+![Buzz Lightyear meme: top text "memes", bottom text "memes everywhere"](docs/_static/examples/readme_buzz_basic.png)
 
 The function returns `(Figure, Axes)` — same convention as `seaborn`,
 `pandas.plot`, and other matplotlib extensions. It does not call
@@ -54,7 +54,7 @@ memes.meme("/path/to/image.jpg", "top text", "bottom text")
 memes.meme("https://example.com/image.png", "from a URL")
 ```
 
-![drake functional example](docs/_static/examples/readme_drake_functional.png)
+![Drake meme in yellow text: top "writing tests", bottom "shipping to prod"](docs/_static/examples/readme_drake_functional.png)
 
 **Object-oriented `Meme` builder, chainable:**
 
@@ -64,7 +64,7 @@ from memeplotlib import Meme
 Meme("buzz").top("python").bottom("python everywhere").save("buzz.png")
 ```
 
-![buzz OO chained example](docs/_static/examples/readme_buzz_oo_chained.png)
+![Buzz Lightyear meme: top "python", bottom "python everywhere"](docs/_static/examples/readme_buzz_oo_chained.png)
 
 **Memify existing matplotlib figures:**
 
@@ -76,7 +76,7 @@ ax.plot([1, 2, 3], [1, 4, 9])
 memes.memify(fig, "stonks")
 ```
 
-![memify stonks example](docs/_static/examples/readme_memify_stonks.png)
+![Line chart with the meme caption "STONKS" across the top](docs/_static/examples/readme_memify_stonks.png)
 
 **RcParams-style scoped configuration:**
 
@@ -89,7 +89,7 @@ with memes.rc_context({"font": "comic", "color": "yellow"}):
 memes.config["fontsize"] = 96
 ```
 
-![global configuration example](docs/_static/examples/readme_config.png)
+![Buzz Lightyear meme in yellow Comic Sans: top "custom defaults", bottom "applied everywhere"](docs/_static/examples/readme_config.png)
 
 **Forward `**kwargs` to `Axes.text`:**
 
@@ -144,7 +144,7 @@ reference — adapted from [jacebrowning/memegen #993][issue-993].
 ```bash
 pip install "memeplotlib[mcp]"
 memeplotlib-mcp                                 # boot the MCP server (stdio)
-memeplotlib meme buzz "hello" "world" -o /tmp/  # CLI render
+memeplotlib meme buzz "hello" "world" -o /tmp/hello.png  # CLI render
 ```
 
 The MCP server exposes `meme`, `search_templates`, and `list_templates`
