@@ -6,6 +6,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import pytest
 
 from memeplotlib._meme import Meme
 
@@ -96,3 +97,97 @@ class TestMemeRender:
         m.show()
         plt.show.assert_called_once()  # type: ignore[attr-defined]
         assert m._fig is not None
+
+
+class TestLineOutlineAndStyleOverrides:
+    def test_overrides_are_recorded_and_chainable(self, sample_template):
+        m = Meme(sample_template, "a", "b")
+        assert m.line(1, "b", outline_color="white", outline_width=5, style="none") is m
+        assert m._per_line_overrides[1] == {
+            "outline_color": "white",
+            "outline_width": 5,
+            "style": "none",
+        }
+
+    def test_pillow_applies_per_line_outline_and_style(self, monkeypatch, sample_image):
+        import memeplotlib._pillow as pil
+        from memeplotlib._template import DEFAULT_TEXT_POSITIONS
+
+        calls: list[dict] = []
+        monkeypatch.setattr(pil, "_draw_caption", lambda img, text, pos, **kw: calls.append(kw))
+        pil.render_pillow(
+            sample_image,
+            ["top", "bottom"],
+            list(DEFAULT_TEXT_POSITIONS),
+            font="impact",
+            color="white",
+            outline_color="black",
+            outline_width=2.0,
+            fontsize=None,
+            style="upper",
+            per_line_overrides={
+                1: {"outline_color": "white", "outline_width": 5, "style": "none"}
+            },
+        )
+        assert calls[0]["outline_color"] == "black" and calls[0]["style"] == "upper"
+        assert calls[1]["outline_color"] == "white"
+        assert calls[1]["outline_width"] == 5.0
+        assert calls[1]["style"] == "none"
+
+
+class TestEditsAfterRender:
+    """Edits made after a render must show up in the next save()/show()."""
+
+    def test_save_after_edit_rerenders(self, sample_template, tmp_path):
+        m = Meme(sample_template, "first", "draft")
+        m.render()
+        m.bottom("final")
+        m.save(tmp_path / "out.png")
+        texts = [t.get_text() for t in m._ax.texts]
+        assert "FINAL" in texts
+        assert "DRAFT" not in texts
+
+    @pytest.mark.parametrize(
+        "edit",
+        [
+            lambda m: m.top("x"),
+            lambda m: m.bottom("x"),
+            lambda m: m.text(2, "x"),
+            lambda m: m.line(0, "x", color="red"),
+            lambda m: m.with_backend("pillow"),
+        ],
+    )
+    def test_every_mutator_invalidates(self, sample_template, edit):
+        m = Meme(sample_template, "a", "b")
+        m.render()
+        assert edit(m) is m  # still chainable
+        assert m._fig is None
+
+
+class TestMemeForcesPillow:
+    """``Meme`` must route client-only knobs to Pillow, exactly like ``meme()``."""
+
+    @pytest.fixture
+    def captured(self, monkeypatch, sample_template):
+        import memeplotlib._meme as meme_mod
+
+        calls: list[dict] = []
+
+        def fake_render_meme(template, lines, **kwargs):
+            calls.append(kwargs)
+            return plt.subplots()
+
+        monkeypatch.setattr(meme_mod, "render_meme", fake_render_meme)
+        return calls
+
+    @pytest.mark.parametrize(
+        "kwargs",
+        [{"fontsize": 48}, {"outline_color": "white"}, {"outline_width": 4.0}],
+    )
+    def test_client_only_knobs_force_pillow(self, captured, sample_template, kwargs):
+        Meme(sample_template, "a", "b", **kwargs).render()
+        assert captured[0]["force_pillow"] is True
+
+    def test_plain_meme_does_not_force_pillow(self, captured, sample_template):
+        Meme(sample_template, "a", "b", font="impact", color="yellow").render()
+        assert captured[0]["force_pillow"] is False

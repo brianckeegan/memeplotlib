@@ -99,3 +99,28 @@ class TestApplyStyle:
     def test_invalid_style_empty_raises(self):
         with pytest.raises(ValueError, match="Invalid style"):
             apply_style("hello", "")
+
+
+# Encoding vectors copied from upstream memegen's own test suite
+# (app/tests/test_utils_text.py::LINES_SLUG, single-line cases) so drift
+# between memeplotlib and the service fails CI.
+_UPSTREAM_VECTORS = [
+    ("hello world", "hello_world"),
+    ("?%#/&\\<>", "~q~p~h~s~a~b~l~g"),
+    ("a/b", "a~sb"),
+    ("variable_name", "variable__name"),
+    ("variable-name", "variable--name"),
+    ("foo\nbar", "foo~nbar"),
+    ("def data() -> Dict", "def_data()_--~g_Dict"),
+    ("finish <- start", "finish_~l--_start"),
+    ('That\'s not how "this" works', "That's_not_how_''this''_works"),
+    ("git commit --no-verify", "git_commit_----no--verify"),
+    ("_username likes _charname", "__username_likes___charname"),
+    ("underscore_ dash-", "underscore__-dash--"),
+    ("kill -9", "kill_--9"),
+]
+
+
+@pytest.mark.parametrize(("text", "slug"), _UPSTREAM_VECTORS)
+def test_encode_matches_upstream_memegen(text, slug):
+    assert encode_text_for_url(text) == slug
