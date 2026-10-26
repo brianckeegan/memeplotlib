@@ -34,7 +34,7 @@ All text styling parameters are available as keyword arguments:
               outline_width=3.0, style="none", show=False)
 
 .. image:: _static/examples/ug_functional_drake_styled.png
-   :alt: Drake with custom text styling
+   :alt: Drake meme in yellow, blue-outlined, mixed-case text: "writing tests" / "shipping to prod"
    :width: 400px
 
 Object-Oriented API
@@ -49,7 +49,7 @@ The :class:`~memeplotlib.Meme` class provides a fluent, chainable interface:
    Meme("doge").top("such code").bottom("very bug").show()
 
 .. image:: _static/examples/ug_oo_doge.png
-   :alt: Doge "such code / very bug" via method chaining
+   :alt: Doge meme: "such code" / "very bug"
    :width: 400px
 
 You can also build a meme step-by-step:
@@ -63,7 +63,7 @@ You can also build a meme step-by-step:
    m.save("output.png")
 
 .. image:: _static/examples/ug_oo_buzz.png
-   :alt: Buzz Lightyear "memes / memes everywhere" step-by-step
+   :alt: Buzz Lightyear meme: "memes" / "memes everywhere"
    :width: 400px
 
 The :meth:`~memeplotlib.Meme.text` method sets text at an arbitrary index,
@@ -79,7 +79,7 @@ which is useful for templates with more than two text positions:
    m.show()
 
 .. image:: _static/examples/ug_oo_expanding_brain.png
-   :alt: Expanding brain with four text positions
+   :alt: Expanding brain meme, four panels: "using print()", "using logging", "using a debugger", "reading the source"
    :width: 400px
 
 You can also pass initial text lines directly to the constructor:
@@ -90,7 +90,7 @@ You can also pass initial text lines directly to the constructor:
    m.show()
 
 .. image:: _static/examples/ug_oo_buzz_constructor.png
-   :alt: Buzz Lightyear via constructor shorthand
+   :alt: Buzz Lightyear meme: "memes" / "memes everywhere"
    :width: 400px
 
 Memifying Existing Figures
@@ -110,7 +110,7 @@ existing matplotlib figure:
    memes.memify(fig, "stonks")
 
 .. image:: _static/examples/ug_memify_basic.png
-   :alt: Line plot with "STONKS" text overlay
+   :alt: Line chart titled "Quadratic growth" with the meme caption "STONKS" across the top
    :width: 400px
 
 The ``position`` parameter controls text layout:
@@ -182,16 +182,17 @@ For scoped overrides that auto-restore on block exit, use
    # config is back to its prior values here
 
 .. image:: _static/examples/ug_config.png
-   :alt: Meme rendered with global configuration overrides
+   :alt: Buzz Lightyear meme in yellow Comic Sans, mixed case: "custom defaults" / "applied everywhere"
    :width: 400px
 
-All configurable attributes:
+All configuration keys (setting an unknown key raises ``KeyError``; a
+wrongly typed value raises ``ValueError``):
 
 .. list-table::
    :header-rows: 1
    :widths: 20 15 65
 
-   * - Attribute
+   * - Key
      - Default
      - Description
    * - ``font``
@@ -225,6 +226,66 @@ All configurable attributes:
    * - ``api_base``
      - ``"https://api.memegen.link"``
      - Base URL for the memegen API.
+   * - ``api_timeout``
+     - ``10``
+     - Seconds to wait for memegen metadata requests.
+   * - ``image_timeout``
+     - ``15``
+     - Seconds to wait for image downloads.
+   * - ``max_retries``
+     - ``2``
+     - Retries for failed HTTP requests (429 and 5xx responses).
+   * - ``retry_backoff``
+     - ``0.5``
+     - Exponential backoff factor between retries, in seconds.
+   * - ``backend``
+     - ``"auto"``
+     - Default rendering backend: ``"auto"``, ``"memegen"``,
+       ``"pillow"``, or ``"matplotlib"``. See `Rendering Backends`_.
+   * - ``extension``
+     - ``"png"``
+     - Image format requested from memegen: ``"png"``, ``"jpg"``,
+       ``"jpeg"``, ``"gif"``, or ``"webp"``.
+   * - ``width``
+     - ``None``
+     - Output width in pixels for memegen renders.
+   * - ``height``
+     - ``None``
+     - Output height in pixels for memegen renders.
+   * - ``layout``
+     - ``None``
+     - memegen layout (e.g. ``"top"``).
+   * - ``background``
+     - ``None``
+     - Custom background image URL forwarded to memegen.
+
+Rendering Backends
+-------------------
+
+:func:`~memeplotlib.meme` and :class:`~memeplotlib.Meme` can draw captions
+three ways. You rarely need to choose; the default ``backend="auto"``
+picks for you:
+
+``"memegen"``
+    The memegen service renders the finished image server-side, matching
+    memegen.link exactly. Used for memegen template IDs when you only set
+    options memegen understands (font, color, style, size, layout).
+``"pillow"``
+    The blank template is downloaded and captions are drawn locally with
+    Pillow. Used for your own images and URLs, and whenever you ask for
+    something memegen can't do: an explicit ``fontsize``, a custom
+    ``outline_color`` / ``outline_width``, or per-line styling with
+    :meth:`Meme.line <memeplotlib.Meme.line>`.
+``"matplotlib"``
+    Captions are drawn as matplotlib text artists. Use it when you need
+    extra :meth:`~matplotlib.axes.Axes.text` keyword arguments such as
+    ``rotation`` or ``alpha``.
+
+Pass ``backend=...`` to force one, or set ``config["backend"]`` to change
+the default. Because the backends rasterize text differently, the same
+caption can look slightly different across them; ``fontsize`` in
+particular is in points for matplotlib but in pixels of the template image
+for Pillow.
 
 Template Discovery
 -------------------
@@ -342,5 +403,5 @@ axes, which is useful for creating subplot layouts:
    plt.show()
 
 .. image:: _static/examples/ug_subplots.png
-   :alt: Side-by-side memes using subplots
+   :alt: Two memes side by side: Buzz Lightyear "memes" / "memes everywhere" and Doge "such code" / "very bug"
    :width: 600px

@@ -115,7 +115,7 @@ both:
               show=False)
 
 .. image:: _static/examples/tutorial_outline.png
-   :alt: Buzz Lightyear with custom outline settings
+   :alt: Buzz Lightyear meme, white text with a black outline: "white on black" / "the classic"
    :width: 400px
 
 Using Local Images
@@ -145,7 +145,7 @@ continue to modify the plot before saving or showing:
    fig.savefig("custom_meme.png", dpi=300)
 
 .. image:: _static/examples/tutorial_figure_back.png
-   :alt: Buzz Lightyear returned as a Figure object
+   :alt: Buzz Lightyear meme: "memes" / "memes everywhere"
    :width: 400px
 
 Next Steps
