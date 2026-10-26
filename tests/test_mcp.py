@@ -268,6 +268,11 @@ class TestRenderMemeToolForwarding:
 
 
 class TestWireFormat:
+    # On Windows, asyncio's event loop builds its self-pipe from a loopback
+    # TCP socketpair, which the offline fixture blocks. Allow sockets for
+    # this test but restrict connections to loopback so it stays offline.
+    @pytest.mark.allow_network
+    @pytest.mark.allow_hosts(["127.0.0.1", "::1"])
     def test_call_tool_returns_image_and_structured_content(self, monkeypatch, tmp_path):
         """Through the server: the image is a content block, not JSON text."""
         import asyncio
