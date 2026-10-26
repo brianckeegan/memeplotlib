@@ -13,8 +13,9 @@ with the special case that an empty line is rendered as a single underscore
 
 Query parameters cover:
 
-- ``style`` — template style name (e.g. ``"maga"`` for ``ds``) or an arbitrary
-  overlay image URL
+- ``style`` — template style name (e.g. ``"maga"`` for ``ds``), or one or
+  more overlay image URLs joined with commas (memegen reads only the first
+  ``style=`` value, so repeated parameters are ignored upstream)
 - ``font`` — memegen-side font alias (e.g. ``"impact"``, ``"thick"``,
   ``"comic"``); see :data:`MEMEGEN_FONT_ALIASES`
 - ``color`` — one text color per caption line, comma-separated
@@ -27,6 +28,7 @@ Query parameters cover:
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, TypedDict
 from urllib.parse import quote
 
@@ -62,14 +64,18 @@ MEMEGEN_FONT_ALIASES: dict[str, str] = {
 
 
 class OverlaySpec(TypedDict, total=False):
-    """An ad-hoc overlay placement passed alongside a memegen render."""
+    """An ad-hoc overlay placement passed alongside a memegen render.
+
+    memegen accepts several overlay images but positions only the first:
+    ``center`` and ``scale`` on later overlays are ignored (with a warning).
+    """
 
     style: str
-    """Overlay image URL, or a template style name."""
+    """Overlay image URL."""
     center: tuple[float, float]
-    """Overlay anchor as ``(x, y)`` fractions in the range ``[0, 1]``."""
+    """Overlay anchor as ``(x, y)`` fractions in the range ``[0, 1]`` (first overlay only)."""
     scale: float
-    """Overlay scale factor."""
+    """Overlay scale factor (first overlay only)."""
 
 
 _VALID_EXTENSIONS = frozenset({"png", "jpg", "jpeg", "gif", "webp"})
@@ -220,8 +226,23 @@ def build_memegen_url(
     # Build query string preserving insertion order (style, font, color first
     # to match the docs' usual presentation; remaining params follow).
     params: list[tuple[str, str]] = []
+
+    # memegen reads a single `style=` value: a template style name, or a
+    # comma-separated list of overlay URLs. It cannot mix the two, and it
+    # applies `center`/`scale` to the first overlay only.
+    overlay_urls = [ov["style"] for ov in overlays or [] if ov.get("style") is not None]
+    if template_style is not None and overlay_urls:
+        warnings.warn(
+            "memegen cannot combine template_style with overlay images; "
+            f"using template_style={template_style!r} and ignoring the overlay URLs.",
+            UserWarning,
+            stacklevel=2,
+        )
+        overlay_urls = []
     if template_style is not None:
         params.append(("style", template_style))
+    elif overlay_urls:
+        params.append(("style", ",".join(overlay_urls)))
     if font is not None:
         params.append(("font", font))
     if color is not None:
@@ -236,16 +257,22 @@ def build_memegen_url(
         params.append(("background", background))
 
     if overlays:
-        for ov in overlays:
-            ov_style = ov.get("style")
-            if ov_style is not None:
-                params.append(("style", ov_style))
-            ov_center = ov.get("center")
-            if ov_center is not None:
-                params.append(("center", f"{ov_center[0]},{ov_center[1]}"))
-            ov_scale = ov.get("scale")
-            if ov_scale is not None:
-                params.append(("scale", str(ov_scale)))
+        # center/scale also position a template's built-in overlay slot, so
+        # they are sent even when no overlay URL is given.
+        first, *rest = overlays
+        ov_center = first.get("center")
+        if ov_center is not None:
+            params.append(("center", f"{ov_center[0]},{ov_center[1]}"))
+        ov_scale = first.get("scale")
+        if ov_scale is not None:
+            params.append(("scale", str(ov_scale)))
+        if any(ov.get("center") is not None or ov.get("scale") is not None for ov in rest):
+            warnings.warn(
+                "memegen applies center/scale to the first overlay only; "
+                "ignoring them on later overlays.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     if params:
         query = "&".join(f"{k}={_format_query_value(v)}" for k, v in params)

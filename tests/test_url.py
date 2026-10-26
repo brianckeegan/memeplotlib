@@ -146,3 +146,48 @@ class TestMemegenFontFor:
         # Sanity check that the documented set is present.
         for name in ("impact", "thick", "thin", "tiny", "comic", "notosans", "kalam"):
             assert name in MEMEGEN_FONT_ALIASES
+
+
+class TestOverlayStyleJoining:
+    """memegen reads one style= value; overlays must be comma-joined."""
+
+    def test_multiple_overlays_are_comma_joined(self):
+        url = build_memegen_url(
+            "drake",
+            ["a", "b"],
+            api_base=API_BASE,
+            overlays=[{"style": "https://x/a.png"}, {"style": "https://x/b.png"}],
+        )
+        assert url.count("style=") == 1
+        assert "style=https://x/a.png,https://x/b.png" in url
+
+    def test_center_scale_only_from_first_overlay(self):
+        with pytest.warns(UserWarning, match="first overlay only"):
+            url = build_memegen_url(
+                "drake",
+                ["a"],
+                api_base=API_BASE,
+                overlays=[
+                    {"style": "https://x/a.png", "center": (0.2, 0.3), "scale": 0.5},
+                    {"style": "https://x/b.png", "center": (0.8, 0.8)},
+                ],
+            )
+        assert url.count("center=") == 1 and "center=0.2,0.3" in url
+        assert url.count("scale=") == 1
+
+    def test_template_style_wins_over_overlays_with_warning(self):
+        with pytest.warns(UserWarning, match="cannot combine template_style"):
+            url = build_memegen_url(
+                "ds",
+                ["a"],
+                api_base=API_BASE,
+                template_style="maga",
+                overlays=[{"style": "https://x/a.png"}],
+            )
+        assert "style=maga" in url and "x/a.png" not in url
+
+    def test_center_without_url_positions_builtin_overlay(self):
+        url = build_memegen_url(
+            "pigeon", ["a"], api_base=API_BASE, overlays=[{"center": (0.4, 0.6)}]
+        )
+        assert "style=" not in url and "center=0.4,0.6" in url
