@@ -56,9 +56,11 @@ example, Claude Code:
 The server exposes three tools:
 
 ``meme``
-    Render a meme and return ``path`` (the saved PNG) and ``base64_png``.
-    Takes the template, ``top`` / ``bottom`` captions, and the same styling
-    options as :func:`~memeplotlib.meme`.
+    Render a meme and return it as MCP image content, so clients show it
+    inline. A text block and the structured result carry ``path`` (the
+    saved file) and ``alt_text``. Takes the template, ``top`` / ``bottom``
+    (or ``lines``) captions, and the same styling options as
+    :func:`~memeplotlib.meme`.
 ``search_templates``
     Search the memegen catalog by ID, name, or keyword.
 ``list_templates``

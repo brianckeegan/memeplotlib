@@ -6,8 +6,9 @@ Code, and any other MCP client that supports the stdio transport.
 
 Tools exposed:
 
-- ``meme``: render a meme to a PNG file and return the path plus a
-  base64-encoded PNG.
+- ``meme``: render a meme to a file and return it as MCP image content,
+  plus a text block and structured content with the saved path and alt
+  text.
 - ``search_templates``: return memegen template metadata matching a
   query string.
 - ``list_templates``: return the full memegen template catalog.
@@ -19,7 +20,7 @@ This module is gated behind the optional ``[mcp]`` extra::
 
 from __future__ import annotations
 
-import base64
+import json
 import os
 import sys
 import tempfile
@@ -33,10 +34,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 try:
-    from mcp.server.fastmcp import FastMCP
+    from mcp.server.mcpserver import Image, MCPServer
+    from mcp.types import CallToolResult, TextContent
 except ImportError as exc:  # pragma: no cover - exercised only without [mcp] extra
     raise ImportError(
-        "memeplotlib-mcp requires the [mcp] extra (mcp>=1.0,<2). "
+        "memeplotlib-mcp requires the [mcp] extra (mcp>=2,<3). "
         f"Install with: pip install 'memeplotlib[mcp]'. Original error: {exc}"
     ) from exc
 
@@ -44,27 +46,23 @@ from memeplotlib import __version__, get_alt_text
 from memeplotlib import meme as _meme
 from memeplotlib._template import TemplateRegistry
 
-server = FastMCP(
+server = MCPServer(
     name="memeplotlib",
+    version=__version__,
     instructions=(
         "memeplotlib MCP server. Render image-macro memes via matplotlib + "
-        "memegen.link. Tools return file paths plus base64-encoded PNG bytes "
-        "so clients can either reference the saved file or inline the image."
+        "memegen.link. The meme tool returns the image itself as image "
+        "content, plus the saved file path and alt text."
     ),
 )
-
-
-def _encode_png(path: str) -> str:
-    with open(path, "rb") as f:
-        return base64.b64encode(f.read()).decode("ascii")
 
 
 @server.tool(
     name="meme",
     description=(
-        "Render a meme image. Returns a dict with the saved file path, "
-        "a base64-encoded PNG, and alt_text describing the image (use it "
-        "as the image's alt text when posting it). The template can be a memegen ID "
+        "Render a meme image. Returns the image, plus the saved file path "
+        "and alt_text describing the image (use it as the image's alt text "
+        "when posting it). The template can be a memegen ID "
         "(e.g. 'buzz', 'drake', 'doge'), a local file path, or an "
         "HTTP(S) URL. Use 'top'/'bottom' for two-slot templates, or "
         "'lines' for templates with three or more caption slots."
@@ -91,8 +89,8 @@ def render_meme_tool(
     style: str | None = None,
     dpi: int | None = None,
     alt_text: str | None = None,
-) -> dict[str, str]:
-    """Render a meme and return path + base64.
+) -> CallToolResult:
+    """Render a meme and return it as image content.
 
     Parameters
     ----------
@@ -106,7 +104,8 @@ def render_meme_tool(
         Caption text for every slot, in order. Use instead of
         ``top``/``bottom`` for templates with three or more slots.
     out_path : str, optional
-        Where to save the PNG. If None, a tempfile is used.
+        Where to save the image; the suffix picks the format. If None, a
+        PNG tempfile is used.
     backend : str, optional
         Override the renderer (``"auto"``, ``"memegen"``, ``"pillow"``,
         ``"matplotlib"``).
@@ -139,8 +138,10 @@ def render_meme_tool(
 
     Returns
     -------
-    dict
-        Keys: ``path`` (str), ``base64_png`` (str), ``alt_text`` (str).
+    mcp.types.CallToolResult
+        ``content`` holds an image block (the rendered meme) and a text
+        block with JSON ``{"path": ..., "alt_text": ...}``;
+        ``structured_content`` holds the same dict.
 
     Raises
     ------
@@ -193,11 +194,14 @@ def render_meme_tool(
     finally:
         for num in set(plt.get_fignums()) - open_before:
             plt.close(num)
-    return {
-        "path": out_path,
-        "base64_png": _encode_png(out_path),
-        "alt_text": alt_text_out,
-    }
+    info = {"path": out_path, "alt_text": alt_text_out}
+    return CallToolResult(
+        content=[
+            Image(path=out_path).to_image_content(),
+            TextContent(type="text", text=json.dumps(info)),
+        ],
+        structured_content=info,
+    )
 
 
 @server.tool(
