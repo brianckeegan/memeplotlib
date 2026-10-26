@@ -106,7 +106,7 @@ commit body.
 
 **Bumping a runtime dependency** — update `pyproject.toml` and the conda
 recipe at `conda-recipe/meta.yaml`. If it's matplotlib, also update
-`packaging/conda-forge/meta.yaml` (uses `matplotlib-base`, not
+`packaging/conda-forge/recipe.yaml` (v1 format; uses `matplotlib-base`, not
 `matplotlib`).
 
 **Cutting a release** — bump `pyproject.toml::project.version` and
