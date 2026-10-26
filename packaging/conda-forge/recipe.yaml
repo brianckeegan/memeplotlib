@@ -82,8 +82,11 @@ about:
     and per-line styling. It has a functional API (meme, memify), a
     chainable Meme builder, generated alt text, a CLI, and an optional
     MCP server.
-  license: MIT
-  license_file: LICENSE
+  # memeplotlib is MIT; the bundled Anton display font is SIL OFL 1.1.
+  license: MIT AND OFL-1.1
+  license_file:
+    - LICENSE
+    - src/memeplotlib/fonts/OFL.txt
 
 extra:
   recipe-maintainers:
