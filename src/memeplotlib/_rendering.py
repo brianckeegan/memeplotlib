@@ -13,8 +13,10 @@ Three backends share a single dispatcher (:func:`render_meme`):
 - ``"matplotlib"`` — legacy path, draws captions with ``Axes.text`` plus
   ``patheffects.Stroke``. Kept for backwards compatibility.
 
-The dispatcher's ``"auto"`` policy picks ``"memegen"`` for memegen
-templates with no client-only knobs and ``"pillow"`` otherwise.
+The dispatcher's ``"auto"`` policy picks ``"matplotlib"`` when ``Axes.text``
+keyword arguments are passed (it is the only backend that can apply them),
+``"memegen"`` for memegen templates with no client-only knobs, and
+``"pillow"`` otherwise.
 """
 
 from __future__ import annotations
@@ -33,8 +35,8 @@ from matplotlib.font_manager import FontProperties, findfont, fontManager
 from PIL import Image
 
 from memeplotlib._cache import TemplateCache
-from memeplotlib._config import DEFAULT_FIGSIZE_WIDTH, config
-from memeplotlib._pillow import render_pillow
+from memeplotlib._config import DEFAULT_COLOR, DEFAULT_FIGSIZE_WIDTH, DEFAULT_FONT, config
+from memeplotlib._pillow import render_pillow, warn_unfittable
 from memeplotlib._template import (
     DEFAULT_TEXT_POSITIONS,
     Template,
@@ -235,16 +237,19 @@ def _fit_text_to_box(
         return  # detached axes; nothing to render against
     renderer = _get_renderer(fig)
 
-    for _ in range(_FIT_MAX_ITERATIONS):
+    def measure() -> tuple[float, float]:
         bbox = txt.get_window_extent(renderer=renderer)
         # Convert to axes fraction
-        inv = ax.transAxes.inverted()
-        bbox_axes = bbox.transformed(inv)
-        text_w = bbox_axes.width
-        text_h = bbox_axes.height
+        bbox_axes = bbox.transformed(ax.transAxes.inverted())
+        return bbox_axes.width, bbox_axes.height
 
-        if text_w <= box_w * _FIT_TOLERANCE and text_h <= box_h * _FIT_TOLERANCE:
-            break
+    def fits(w: float, h: float) -> bool:
+        return w <= box_w * _FIT_TOLERANCE and h <= box_h * _FIT_TOLERANCE
+
+    for _ in range(_FIT_MAX_ITERATIONS):
+        text_w, text_h = measure()
+        if fits(text_w, text_h):
+            return
 
         # mpl's Text.get_fontsize() is annotated as float|str, but it returns
         # a numeric size at runtime once the text has been added to an axes.
@@ -259,6 +264,9 @@ def _fit_text_to_box(
         )
         new_size = max(min_fontsize, current * scale * _FIT_SHRINK_FACTOR)
         txt.set_fontsize(new_size)
+
+    if float(txt.get_fontsize()) <= min_fontsize and not fits(*measure()):
+        warn_unfittable(txt.get_text())
 
 
 # --- Core drawing ---
@@ -381,6 +389,18 @@ def _smart_wrap(text: str, box_width_frac: float) -> str:
 # --- Main rendering functions ---
 
 
+def _warn_dropped_lines(lines: Sequence[str], capacity: int, where: str) -> None:
+    """Warn when non-empty caption lines have no slot to render into."""
+    dropped = [line for line in lines[capacity:] if line]
+    if dropped:
+        warnings.warn(
+            f"{where} has {capacity} caption slot(s); ignoring extra text: "
+            f"{', '.join(repr(line) for line in dropped)}",
+            UserWarning,
+            stacklevel=4,
+        )
+
+
 def _figure_for_image(
     img: np.ndarray,
     ax: Axes | None,
@@ -419,12 +439,13 @@ def _fetch_rendered_image(url: str, cache: TemplateCache | None) -> np.ndarray:
     resp = _get_session().get(url, timeout=config["image_timeout"])
     resp.raise_for_status()
     image_bytes = resp.content
-    img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
     if cache is not None and config["cache_enabled"]:
-        cache.set_image(url, image_bytes)
+        decoded = cache.set_image(url, image_bytes)
+        if decoded is not None:
+            return decoded
 
-    return img
+    return np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
 
 
 def _render_via_memegen(
@@ -435,7 +456,7 @@ def _render_via_memegen(
     figsize: tuple[float, float] | None,
     dpi: int,
     font: str,
-    color: str,
+    color: str | None,
     style: str,
     extension: str,
     width: int | None,
@@ -451,7 +472,14 @@ def _render_via_memegen(
     # encoding so memegen receives the final visible string.
     transformed = [apply_style(line, style) if line else line for line in lines]
 
-    memegen_font = memegen_font_for(font)
+    # memegen's `color=` is one value per line, so a single color would only
+    # paint line 1. memeplotlib's `color` means "all captions", as on the
+    # Pillow/matplotlib backends; repeat it. Comma lists pass through as-is.
+    if color and "," not in color:
+        color = ",".join([color] * max(1, len(lines)))
+
+    # "" means "template default": omit the parameter entirely.
+    memegen_font = memegen_font_for(font) or None
     # memegen only honours `background=` on its "custom" template; on any
     # other ID it is silently ignored. A background replaces the template
     # image, so render it via "custom".
@@ -582,9 +610,10 @@ def render_meme(
 ) -> tuple[Figure, Axes]:
     """Render a meme using the configured backend.
 
-    The ``"auto"`` backend selects ``"memegen"`` when the template originates
-    from the memegen catalog and the user requested no client-only feature;
-    otherwise ``"pillow"``. Pass ``backend="matplotlib"`` for the legacy
+    The ``"auto"`` backend selects ``"matplotlib"`` when ``text_kwargs`` are
+    given, ``"memegen"`` when the template originates from the memegen
+    catalog and the user requested no client-only feature, and ``"pillow"``
+    otherwise. Pass ``backend="matplotlib"`` for the legacy
     ``Axes.text`` rendering retained for backwards compatibility.
 
     Parameters
@@ -632,7 +661,9 @@ def render_meme(
         Per-line ``{font, color, fontsize, position}`` overrides for the
         Pillow renderer.
     **text_kwargs
-        Forwarded to :meth:`Axes.text` (matplotlib backend only).
+        Forwarded to :meth:`Axes.text` (matplotlib backend only). Under
+        ``"auto"`` they select the matplotlib backend; under an explicit
+        ``"memegen"`` or ``"pillow"`` they are ignored with a warning.
 
     Returns
     -------
@@ -664,17 +695,30 @@ def render_meme(
         force_pillow=force_pillow,
         text_kwargs=text_kwargs,
         per_line_overrides=per_line_overrides,
+        style=style_val,
     )
 
+    capacity = template.lines_count if chosen == "memegen" else len(template.text_positions)
+    _warn_dropped_lines(lines, capacity, f"Template {template.id!r}")
+
     if chosen == "memegen":
+        # memegen's `color=` sets per-line text colors, and templates define
+        # their own (some captions are black). Only send it when the caller
+        # chose a color, per call or by changing config["color"].
+        use_template_color = color is None and config["color"] == DEFAULT_COLOR
+        # memegen templates each have designed fonts (mostly "thick"); only
+        # override them when the caller chose a font, either per call or by
+        # changing config["font"] from its default.
+        use_template_font = font is None and config["font"] == DEFAULT_FONT
+        memegen_font = "default" if use_template_font else font_val
         return _render_via_memegen(
             template,
             lines,
             ax=ax,
             figsize=figsize,
             dpi=dpi_val,
-            font=font_val,
-            color=color_val,
+            font=memegen_font,
+            color=None if use_template_color else color_val,
             style=style_val,
             extension=extension_val,
             width=width_val,
@@ -728,13 +772,32 @@ def _select_backend(
     force_pillow: bool,
     text_kwargs: dict[str, Any],
     per_line_overrides: dict[int, dict[str, object]] | None,
+    style: str = "upper",
 ) -> str:
     """Resolve ``backend="auto"`` to a concrete backend name."""
     if requested != "auto":
+        if requested == "memegen" and style != "upper":
+            # memegen re-applies each template line's own casing (mostly
+            # upper) after our transform; there is no query parameter for it.
+            warnings.warn(
+                f"style={style!r} may have no effect on backend='memegen': "
+                f"memegen applies each template's own text casing. Use "
+                f"backend='pillow' (or 'auto') to control it.",
+                UserWarning,
+                stacklevel=3,
+            )
         if requested not in {"memegen", "pillow", "matplotlib"}:
             raise ValueError(
                 f"Unknown backend {requested!r}. Must be one of: "
                 f"'auto', 'memegen', 'pillow', 'matplotlib'."
+            )
+        if text_kwargs and requested in {"memegen", "pillow"}:
+            warnings.warn(
+                f"Axes.text keyword arguments {sorted(text_kwargs)} are ignored by "
+                f"backend={requested!r}; use backend='matplotlib' (or 'auto') "
+                f"to apply them.",
+                UserWarning,
+                stacklevel=3,
             )
         if requested == "memegen" and not template.is_memegen:
             warnings.warn(
@@ -746,15 +809,20 @@ def _select_backend(
             return "pillow"
         return requested
 
+    # Only the matplotlib backend draws with Axes.text, so it is the only
+    # one that can honour arbitrary text kwargs (rotation, alpha, ...).
+    if text_kwargs:
+        return "matplotlib"
     if force_pillow:
         return "pillow"
     if not template.is_memegen:
         return "pillow"
     if per_line_overrides:
         return "pillow"
-    if text_kwargs:
-        return "pillow"
     if memegen_font_for(font) is None:
+        return "pillow"
+    if style != "upper":
+        # memegen would re-uppercase most templates' captions.
         return "pillow"
     return "memegen"
 
@@ -828,6 +896,8 @@ def render_memify(
         positions = [DEFAULT_TEXT_POSITIONS[1]]
     else:  # center
         positions = [TextPosition(anchor_x=0.0, anchor_y=0.4, scale_x=1.0, scale_y=0.2)]
+
+    _warn_dropped_lines(lines, len(positions), f"memify position {position!r}")
 
     # Create a transparent overlay axes spanning the full figure
     overlay_ax = fig.add_axes((0.0, 0.0, 1.0, 1.0), facecolor="none")

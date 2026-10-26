@@ -84,6 +84,28 @@ def sample_template(sample_image) -> Template:
 
 
 @pytest.fixture(autouse=True)
+def _fresh_shared_cache_memory():
+    """Empty the shared in-memory image LRU so tests can't see each other's images."""
+    from memeplotlib._cache import default_cache
+
+    default_cache()._memory.clear()
+    yield
+    default_cache()._memory.clear()
+
+
+@pytest.fixture(autouse=True)
+def _isolated_cache_dir(tmp_path, monkeypatch):
+    """Point the implicit on-disk cache at a per-test directory.
+
+    Keeps tests from reading or writing the user's real cache when
+    ``config["cache_enabled"]`` is left on.
+    """
+    from memeplotlib import config
+
+    monkeypatch.setitem(config, "cache_dir", str(tmp_path / "memeplotlib-cache"))
+
+
+@pytest.fixture(autouse=True)
 def _close_figures():
     """Close all matplotlib figures after each test to prevent memory leaks."""
     yield

@@ -60,16 +60,27 @@ Every parameter below is optional. ``memeplotlib`` only emits a query
 string when at least one parameter is supplied.
 
 ================  ================================================================
-``style=``        Template-specific style name (e.g. ``maga`` for ``ds``) **or** an
-                  arbitrary image URL for an ad-hoc overlay. May appear multiple
-                  times when overlays are stacked.
-``font=``         Memegen font alias. The closed set
-                  (:data:`memeplotlib._url.MEMEGEN_FONT_ALIASES`) is
-                  ``impact``, ``thick``, ``thin``, ``tiny``, ``comic``,
-                  ``notosans``, ``kalam``, ``he``, ``jp``, ``tw``,
-                  ``default``. Fonts outside that set fall through to the
-                  Pillow backend automatically under ``backend="auto"``.
-``color=``        ``"fg"`` or ``"fg,bg"``. HTML names or hex codes.
+``style=``        Template-specific style name (e.g. ``maga`` for ``ds``) **or**
+                  one or more overlay image URLs joined with commas. Sent
+                  once: memegen reads only the first ``style=`` value, and
+                  it cannot mix a style name with overlay URLs.
+``font=``         Memegen font ID or alias, mirroring upstream
+                  ``/fonts/`` (:data:`memeplotlib._url.MEMEGEN_FONT_ALIASES`):
+                  ``titilliumweb``/``thick``, ``titilliumweb-thin``/``thin``,
+                  ``segoe``/``tiny``, ``kalam``/``comic``, ``impact``,
+                  ``notosans``, ``hgminchob``/``jp``,
+                  ``notosanshebrew``/``he``. Sent only when you choose a
+                  font (per call, or by changing ``config["font"]``);
+                  otherwise each template keeps its designed font.
+                  ``font="default"`` forces that. Fonts outside the set
+                  fall through to the Pillow backend under
+                  ``backend="auto"``.
+``color=``        One text color per caption line, comma-separated
+                  (``"white,red"`` colors line 1 white and line 2 red).
+                  HTML names or hex codes. memegen's outline is always
+                  black. ``meme(color="yellow")`` repeats the color for
+                  every line; when no color is chosen, nothing is sent and
+                  each template keeps its own caption colors.
 ``width=``        Output width in pixels.
 ``height=``       Output height in pixels.
 ``layout=``       Alternate layout (e.g. ``top``).
@@ -77,9 +88,9 @@ string when at least one parameter is supplied.
                   ``custom`` template; :func:`~memeplotlib.meme` switches
                   to ``custom`` automatically when ``background`` is set.
                   Composes with ``style=<url>`` overlays.
-``center=``       ``"x,y"`` overlay anchor (``[0, 1]`` floats). Paired with an
-                  ``style=`` overlay.
-``scale=``        Overlay scale factor. Paired with an ``style=`` overlay.
+``center=``       ``"x,y"`` overlay anchor (``[0, 1]`` floats). Applies to
+                  the first overlay only.
+``scale=``        Overlay scale factor. Applies to the first overlay only.
 ================  ================================================================
 
 Output formats
