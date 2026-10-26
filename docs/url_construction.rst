@@ -63,12 +63,17 @@ string when at least one parameter is supplied.
 ``style=``        Template-specific style name (e.g. ``maga`` for ``ds``) **or** an
                   arbitrary image URL for an ad-hoc overlay. May appear multiple
                   times when overlays are stacked.
-``font=``         Memegen font alias. The closed set
-                  (:data:`memeplotlib._url.MEMEGEN_FONT_ALIASES`) is
-                  ``impact``, ``thick``, ``thin``, ``tiny``, ``comic``,
-                  ``notosans``, ``kalam``, ``he``, ``jp``, ``tw``,
-                  ``default``. Fonts outside that set fall through to the
-                  Pillow backend automatically under ``backend="auto"``.
+``font=``         Memegen font ID or alias, mirroring upstream
+                  ``/fonts/`` (:data:`memeplotlib._url.MEMEGEN_FONT_ALIASES`):
+                  ``titilliumweb``/``thick``, ``titilliumweb-thin``/``thin``,
+                  ``segoe``/``tiny``, ``kalam``/``comic``, ``impact``,
+                  ``notosans``, ``hgminchob``/``jp``,
+                  ``notosanshebrew``/``he``. Sent only when you choose a
+                  font (per call, or by changing ``config["font"]``);
+                  otherwise each template keeps its designed font.
+                  ``font="default"`` forces that. Fonts outside the set
+                  fall through to the Pillow backend under
+                  ``backend="auto"``.
 ``color=``        One text color per caption line, comma-separated
                   (``"white,red"`` colors line 1 white and line 2 red).
                   HTML names or hex codes. memegen's outline is always

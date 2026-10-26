@@ -8,7 +8,14 @@ from typing import TYPE_CHECKING, Any
 
 import matplotlib.pyplot as plt
 
-from memeplotlib._cache import TemplateCache
+from memeplotlib._alt import (
+    default_meme_alt_text,
+    default_memify_alt_text,
+    get_alt_text,
+    savefig_metadata,
+    set_alt_text,
+)
+from memeplotlib._cache import default_cache
 from memeplotlib._config import config
 from memeplotlib._rendering import render_meme, render_memify
 from memeplotlib._template import _resolve_template
@@ -19,7 +26,7 @@ if TYPE_CHECKING:
     from matplotlib.figure import Figure
 
 
-_cache = TemplateCache()
+_cache = default_cache()
 
 
 # Sentinel used to detect whether the caller explicitly supplied a value.
@@ -45,6 +52,7 @@ def meme(
     background: str | None = None,
     overlays: Sequence[OverlaySpec] | None = None,
     template_style: str | None = None,
+    alt_text: str | None = None,
     show: bool = False,
     savefig: str | Path | None = None,
     figsize: tuple[float, float] | None = None,
@@ -57,8 +65,9 @@ def meme(
     The default ``backend="auto"`` selects the memegen rendering API for
     memegen-catalogue templates, and falls back to a Pillow client-side
     renderer for custom local images or whenever the user supplies a
-    feature memegen can't express (per-line ``fontsize``, custom outline,
-    ``Axes.text`` kwargs).
+    feature memegen can't express (explicit ``fontsize`` or a custom
+    outline). Extra ``Axes.text`` kwargs select the matplotlib renderer,
+    the only one that can apply them.
 
     Parameters
     ----------
@@ -84,7 +93,10 @@ def meme(
         Explicit font size in points. Forces the Pillow backend under
         ``backend="auto"`` (memegen always auto-fits).
     style : str, optional
-        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
+        Text transform -- ``"upper"``, ``"lower"``, or ``"none"``. memegen
+        applies each template's own casing (usually upper), so under
+        ``backend="auto"`` anything but ``"upper"`` selects the Pillow
+        backend.
     backend : str, optional
         ``"auto"`` (default), ``"memegen"``, ``"pillow"``, or
         ``"matplotlib"`` (legacy, draws captions with
@@ -103,6 +115,12 @@ def meme(
         ``style=`` / ``center=`` / ``scale=`` query params.
     template_style : str, optional
         memegen template-specific style (e.g. ``"maga"`` for ``"ds"``).
+    alt_text : str, optional
+        Text alternative describing the meme for screen-reader users. If
+        omitted, one is generated from the template name and captions.
+        Retrieve it with :func:`get_alt_text`; it is also embedded in the
+        file written by ``savefig`` (PNG/SVG ``Description``, PDF
+        ``Subject``).
     show : bool, optional
         Whether to call :func:`matplotlib.pyplot.show` after rendering.
     savefig : str, Path, or None, optional
@@ -114,9 +132,10 @@ def meme(
     ax : Axes or None, optional
         Existing matplotlib Axes to render onto.
     **text_kwargs
-        Additional keyword arguments forwarded to :meth:`Axes.text` under
-        the ``"matplotlib"`` and ``"pillow"`` backends. Passing any
-        ``text_kwargs`` under ``backend="auto"`` forces the Pillow backend.
+        Additional keyword arguments forwarded to :meth:`Axes.text`. Only
+        the ``"matplotlib"`` backend applies them, so passing any under
+        ``backend="auto"`` selects it; an explicit ``"memegen"`` or
+        ``"pillow"`` backend ignores them with a ``UserWarning``.
 
     Returns
     -------
@@ -156,8 +175,9 @@ def meme(
     eff_style = style if style is not _UNSET else None
 
     # Force the pillow path when memegen can't honour the request:
-    # explicit fontsize, non-default outline, or extra Axes.text kwargs.
-    force_pillow = bool(user_fontsize or user_outline_color or user_outline_width or text_kwargs)
+    # explicit fontsize or non-default outline. (Extra Axes.text kwargs are
+    # routed to the matplotlib backend by the dispatcher instead.)
+    force_pillow = bool(user_fontsize or user_outline_color or user_outline_width)
 
     backend_val = backend if backend is not None else config["backend"]
 
@@ -185,6 +205,7 @@ def meme(
         force_pillow=force_pillow,
         **text_kwargs,
     )
+    set_alt_text(ax_out, alt_text or default_meme_alt_text(tmpl, lines))
 
     if savefig is not None:
         fig.savefig(
@@ -192,12 +213,19 @@ def meme(
             dpi=dpi if dpi is not None else config["dpi"],
             bbox_inches="tight",
             pad_inches=0,
+            **_metadata_kwargs(savefig, get_alt_text(ax_out)),
         )
 
     if show:
         plt.show()
 
     return fig, ax_out
+
+
+def _metadata_kwargs(path: str | Path, alt: str | None) -> dict[str, Any]:
+    """``savefig`` kwargs embedding *alt* (empty for formats without metadata)."""
+    metadata = savefig_metadata(path, alt)
+    return {"metadata": metadata} if metadata else {}
 
 
 def memify(
@@ -210,6 +238,7 @@ def memify(
     outline_width: float | None = None,
     fontsize: float | None = None,
     style: str | None = None,
+    alt_text: str | None = None,
     show: bool = False,
     savefig: str | Path | None = None,
     **text_kwargs: Any,
@@ -247,6 +276,11 @@ def memify(
         Font size in points (auto if ``None``).
     style : str or None, optional
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
+    alt_text : str or None, optional
+        Text alternative describing the result for screen-reader users.
+        If omitted, the captions are described and appended to any alt
+        text the figure already carries. Retrieve it with
+        :func:`get_alt_text`; it is also embedded in the ``savefig`` file.
     show : bool, optional
         Whether to call :func:`matplotlib.pyplot.show` after rendering
         (default: ``False``).
@@ -281,6 +315,11 @@ def memify(
         style=style,
         **text_kwargs,
     )
+    if alt_text is None:
+        existing = get_alt_text(result)
+        caption = default_memify_alt_text(position, lines)
+        alt_text = f"{existing} {caption}" if existing else caption
+    set_alt_text(result, alt_text)
 
     if savefig is not None:
         result.savefig(
@@ -288,6 +327,7 @@ def memify(
             dpi=config["dpi"],
             bbox_inches="tight",
             pad_inches=0,
+            **_metadata_kwargs(savefig, alt_text),
         )
 
     if show:
