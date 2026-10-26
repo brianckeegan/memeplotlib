@@ -129,6 +129,17 @@ DEFAULT_TEXT_POSITIONS = [
 ]
 
 
+def _default_text_positions(lines_count: int) -> list[TextPosition]:
+    """Guess caption boxes: top/bottom for up to two lines, else equal bands."""
+    if lines_count <= 2:
+        return list(DEFAULT_TEXT_POSITIONS)
+    slot_height = 1.0 / lines_count
+    return [
+        TextPosition(anchor_x=0.0, anchor_y=i * slot_height, scale_x=1.0, scale_y=slot_height)
+        for i in range(lines_count)
+    ]
+
+
 @dataclass
 class Template:
     """A meme template with a background image and text position metadata.
@@ -248,21 +259,15 @@ class Template:
         # "config.<hash>" into `styles`; they are not usable style names.
         styles = [s for s in styles_raw if isinstance(s, str) and not s.startswith("config.")]
 
-        if lines_count <= 2:
-            text_positions = list(DEFAULT_TEXT_POSITIONS)
+        # The API doesn't expose caption boxes; use the vendored upstream
+        # snapshot when it matches the line count, else guess.
+        from memeplotlib._geometry import TEMPLATE_GEOMETRY  # avoids an import cycle
+
+        known = TEMPLATE_GEOMETRY.get(template_id)
+        if known is not None and len(known) == lines_count:
+            text_positions = list(known)
         else:
-            # Distribute text positions evenly across the image
-            text_positions = []
-            slot_height = 1.0 / lines_count
-            for i in range(lines_count):
-                text_positions.append(
-                    TextPosition(
-                        anchor_x=0.0,
-                        anchor_y=i * slot_height,
-                        scale_x=1.0,
-                        scale_y=slot_height,
-                    )
-                )
+            text_positions = _default_text_positions(lines_count)
 
         return cls(
             id=template_id,
