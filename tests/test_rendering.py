@@ -302,3 +302,59 @@ class TestPillowFontCaching:
         path = _resolve_font_path("anton")
         assert _load_font(path, 40) is _load_font(path, 40)
         assert _load_font(path, 40) is not _load_font(path, 41)
+
+
+class TestPillowOutlineScaling:
+    def test_default_width_matches_memegen_ratio(self):
+        from memeplotlib._pillow import _stroke_width
+
+        # outline_width=2.0 (the default) gives font_size / 12, like memegen.
+        assert _stroke_width(48, 2.0) == 4
+        assert _stroke_width(240, 2.0) == 20
+
+    def test_scales_with_outline_width(self):
+        from memeplotlib._pillow import _stroke_width
+
+        assert _stroke_width(120, 4.0) == 2 * _stroke_width(120, 2.0)
+
+    def test_zero_width_disables_outline(self):
+        from memeplotlib._pillow import _stroke_width
+
+        assert _stroke_width(200, 0.0) == 0
+
+    def test_small_text_keeps_a_visible_outline(self):
+        from memeplotlib._pillow import _stroke_width
+
+        assert _stroke_width(8, 0.5) == 1
+
+    def test_large_caption_gets_proportional_stroke(self, monkeypatch):
+        import numpy as np
+        from PIL import ImageDraw
+
+        from memeplotlib import _pillow as pil
+        from memeplotlib._template import TextPosition
+
+        calls = []
+        original = ImageDraw.ImageDraw.multiline_text
+
+        def spy(self, xy, text, *args, **kwargs):
+            calls.append(kwargs)
+            return original(self, xy, text, *args, **kwargs)
+
+        monkeypatch.setattr(ImageDraw.ImageDraw, "multiline_text", spy)
+        image = np.full((1200, 1200, 4), 255, dtype=np.uint8)
+        pil.render_pillow(
+            image,
+            ["big"],
+            [TextPosition(anchor_x=0.0, anchor_y=0.0, scale_x=1.0, scale_y=0.3)],
+            font="anton",
+            color="white",
+            outline_color="black",
+            outline_width=2.0,
+            fontsize=None,
+            style="upper",
+        )
+        (kwargs,) = calls
+        font_size = kwargs["font"].size
+        assert font_size > 100
+        assert kwargs["stroke_width"] == round(font_size / 12)
