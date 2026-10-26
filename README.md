@@ -2,7 +2,7 @@
 [![codecov](https://codecov.io/gh/brianckeegan/memeplotlib/graph/badge.svg)](https://codecov.io/gh/brianckeegan/memeplotlib)
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianckeegan.github.io/memeplotlib/)
 [![PyPI version](https://img.shields.io/pypi/v/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
-[![conda-forge version](https://img.shields.io/conda/vn/conda-forge/memeplotlib.svg)](https://anaconda.org/conda-forge/memeplotlib)
+[![conda version](https://img.shields.io/conda/vn/brianckeegan/memeplotlib.svg)](https://anaconda.org/brianckeegan/memeplotlib)
 [![Python versions](https://img.shields.io/pypi/pyversions/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -19,7 +19,7 @@ font sizes, custom outlines, or per-line position overrides.
 ```bash
 pip install memeplotlib
 # or
-conda install -c conda-forge memeplotlib
+conda install -c brianckeegan -c conda-forge memeplotlib
 ```
 
 For the [Model Context Protocol](https://modelcontextprotocol.io) server (use
