@@ -1,48 +1,47 @@
 name-template: 'v$RESOLVED_VERSION'
 tag-template: 'v$RESOLVED_VERSION'
+
+# Each category's label matching lives in `when`, and `semver-increment`
+# sets how a matched change bumps $RESOLVED_VERSION (the highest bump wins;
+# unmatched changes bump the patch version). This replaces the
+# `categories[*].labels` and `version-resolver.*.labels` fields that
+# release-drafter v7 deprecates.
 categories:
   - title: '⚠️ Breaking changes'
-    labels:
-      - 'breaking'
-      - 'breaking-change'
+    semver-increment: 'major'
+    when:
+      labels:
+        - 'breaking'
+        - 'breaking-change'
+        - 'major'
   - title: '🚀 Features'
-    labels:
-      - 'feature'
-      - 'enhancement'
+    semver-increment: 'minor'
+    when:
+      labels:
+        - 'feature'
+        - 'enhancement'
+        - 'minor'
   - title: '🐛 Bug fixes'
-    labels:
-      - 'fix'
-      - 'bug'
+    semver-increment: 'patch'
+    when:
+      labels:
+        - 'fix'
+        - 'bug'
+        - 'patch'
   - title: '📚 Documentation'
-    labels:
-      - 'docs'
-      - 'documentation'
+    when:
+      labels:
+        - 'docs'
+        - 'documentation'
   - title: '🏠 Internal'
-    labels:
-      - 'chore'
-      - 'internal'
-      - 'dependencies'
+    when:
+      labels:
+        - 'chore'
+        - 'internal'
+        - 'dependencies'
 
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 change-title-escapes: '\<*_&'
-
-version-resolver:
-  major:
-    labels:
-      - 'major'
-      - 'breaking'
-      - 'breaking-change'
-  minor:
-    labels:
-      - 'minor'
-      - 'feature'
-      - 'enhancement'
-  patch:
-    labels:
-      - 'patch'
-      - 'fix'
-      - 'bug'
-  default: patch
 
 template: |
   ## What's changed
