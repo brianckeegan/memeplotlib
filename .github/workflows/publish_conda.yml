@@ -26,6 +26,14 @@ jobs:
       (github.event_name == 'workflow_dispatch' && github.event.inputs.target == 'conda') ||
       (github.event_name == 'release' && github.event.action == 'published')
 
+    env:
+      # Miniconda bundles the conda-pypi plugin, which logs a "Did you know?
+      # You can install many PyPI packages with conda" tip whenever an
+      # environment has pip, starting with the one setup-miniconda creates.
+      # This is the plugin's own off switch (plugins.conda_pypi_pip_warning),
+      # set job-wide so it applies from the first conda command.
+      CONDA_PLUGINS_CONDA_PYPI_PIP_WARNING: "false"
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v7
@@ -41,16 +49,6 @@ jobs:
           conda-remove-defaults: "true"
           activate-environment: build
           python-version: "3.10"
-
-      # Miniconda bundles the conda-pypi plugin, which logs a "Did you know?
-      # You can install many PyPI packages with conda" tip once pip is in
-      # the environment. Turn it off with the plugin's own setting.
-      - name: Turn off the conda-pypi tip
-        shell: bash -el {0}
-        run: |
-          if conda pypi --help > /dev/null 2>&1; then
-            conda config --set plugins.conda_pypi_pip_warning false
-          fi
 
       - name: Install build tools
         shell: bash -el {0}
