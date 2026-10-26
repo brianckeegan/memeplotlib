@@ -151,16 +151,44 @@ class TestBackendSelection:
         )
         assert chosen == "pillow"
 
-    def test_auto_picks_pillow_with_text_kwargs(self):
+    @pytest.mark.parametrize("is_memegen", [True, False])
+    @pytest.mark.parametrize("force_pillow", [True, False])
+    def test_auto_picks_matplotlib_with_text_kwargs(self, is_memegen, force_pillow):
+        # Only the matplotlib backend draws with Axes.text, so it wins even
+        # when other knobs would otherwise pick Pillow.
         chosen = _select_backend(
             "auto",
-            self._tmpl(is_memegen=True),
+            self._tmpl(is_memegen=is_memegen),
             font="impact",
-            force_pillow=False,
+            force_pillow=force_pillow,
             text_kwargs={"alpha": 0.5},
             per_line_overrides=None,
         )
-        assert chosen == "pillow"
+        assert chosen == "matplotlib"
+
+    @pytest.mark.parametrize("backend", ["memegen", "pillow"])
+    def test_explicit_backend_warns_about_ignored_text_kwargs(self, backend):
+        with pytest.warns(UserWarning, match="ignored by backend"):
+            chosen = _select_backend(
+                backend,
+                self._tmpl(is_memegen=True),
+                font="impact",
+                force_pillow=False,
+                text_kwargs={"rotation": 15},
+                per_line_overrides=None,
+            )
+        assert chosen == backend
+
+    def test_explicit_matplotlib_does_not_warn(self, recwarn):
+        _select_backend(
+            "matplotlib",
+            self._tmpl(is_memegen=True),
+            font="impact",
+            force_pillow=False,
+            text_kwargs={"rotation": 15},
+            per_line_overrides=None,
+        )
+        assert not [w for w in recwarn if issubclass(w.category, UserWarning)]
 
     def test_auto_picks_pillow_with_per_line_overrides(self):
         chosen = _select_backend(
@@ -264,3 +292,110 @@ class TestBuildMemegenUrlReexport:
         assert hasattr(memes, "build_memegen_url")
         url = memes.build_memegen_url("buzz", ["hi"], api_base="https://api.memegen.link")
         assert url == "https://api.memegen.link/images/buzz/hi.png"
+
+
+class TestMemegenFontDefault:
+    """memegen renders keep each template's designed font unless asked."""
+
+    def _render(self, fake_png_bytes, **kwargs):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", "b", backend="memegen", **kwargs)
+        return [str(c.request.url) for c in responses.calls if "/images/buzz/" in c.request.url][0]
+
+    @responses.activate
+    def test_default_font_is_not_sent(self, buzz_metadata_response, fake_png_bytes):
+        assert "font=" not in self._render(fake_png_bytes)
+
+    @responses.activate
+    def test_explicit_font_is_sent(self, buzz_metadata_response, fake_png_bytes):
+        assert "font=impact" in self._render(fake_png_bytes, font="impact")
+
+    @responses.activate
+    def test_config_font_change_is_sent(self, buzz_metadata_response, fake_png_bytes, monkeypatch):
+        monkeypatch.setitem(memes.config, "font", "comic")
+        assert "font=comic" in self._render(fake_png_bytes)
+
+    @responses.activate
+    def test_font_default_keyword_sends_nothing(self, buzz_metadata_response, fake_png_bytes):
+        assert "font=" not in self._render(fake_png_bytes, font="default")
+
+
+class TestMemegenColor:
+    """memegen's color= is per line; templates keep their colors by default."""
+
+    def _render(self, fake_png_bytes, **kwargs):
+        responses.add(
+            responses.GET,
+            memegen_rendered_pattern("buzz"),
+            body=fake_png_bytes,
+            content_type="image/png",
+        )
+        meme("buzz", "a", "b", backend="memegen", **kwargs)
+        return [str(c.request.url) for c in responses.calls if "/images/buzz/" in c.request.url][0]
+
+    @responses.activate
+    def test_default_color_is_not_sent(self, buzz_metadata_response, fake_png_bytes):
+        assert "color=" not in self._render(fake_png_bytes)
+
+    @responses.activate
+    def test_single_color_applies_to_every_line(self, buzz_metadata_response, fake_png_bytes):
+        assert "color=yellow,yellow" in self._render(fake_png_bytes, color="yellow")
+
+    @responses.activate
+    def test_per_line_colors_pass_through(self, buzz_metadata_response, fake_png_bytes):
+        assert "color=white,red" in self._render(fake_png_bytes, color="white,red")
+
+    @responses.activate
+    def test_config_color_change_is_sent(
+        self, buzz_metadata_response, fake_png_bytes, monkeypatch
+    ):
+        monkeypatch.setitem(memes.config, "color", "yellow")
+        assert "color=yellow,yellow" in self._render(fake_png_bytes)
+
+
+class TestStyleRouting:
+    def _tmpl(self):
+        return Template(id="buzz", name="buzz", image_url="https://x/b.png", is_memegen=True)
+
+    @pytest.mark.parametrize("style", ["lower", "none"])
+    def test_auto_routes_non_upper_style_to_pillow(self, style):
+        chosen = _select_backend(
+            "auto",
+            self._tmpl(),
+            font="impact",
+            force_pillow=False,
+            text_kwargs={},
+            per_line_overrides=None,
+            style=style,
+        )
+        assert chosen == "pillow"
+
+    def test_auto_keeps_memegen_for_upper(self):
+        chosen = _select_backend(
+            "auto",
+            self._tmpl(),
+            font="impact",
+            force_pillow=False,
+            text_kwargs={},
+            per_line_overrides=None,
+            style="upper",
+        )
+        assert chosen == "memegen"
+
+    def test_explicit_memegen_with_lower_style_warns(self):
+        with pytest.warns(UserWarning, match="own text casing"):
+            chosen = _select_backend(
+                "memegen",
+                self._tmpl(),
+                font="impact",
+                force_pillow=False,
+                text_kwargs={},
+                per_line_overrides=None,
+                style="none",
+            )
+        assert chosen == "memegen"

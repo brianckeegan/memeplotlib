@@ -17,10 +17,16 @@ Quick start::
     )
 """
 
+from memeplotlib._alt import get_alt_text
 from memeplotlib._api import meme, memify
 from memeplotlib._config import MemeplotlibConfig, config, rc_context
 from memeplotlib._meme import Meme
-from memeplotlib._template import Template, TemplateRegistry
+from memeplotlib._template import (
+    Template,
+    TemplateNotFoundError,
+    TemplateRegistry,
+    TextPosition,
+)
 from memeplotlib._url import OverlaySpec, build_memegen_url
 
 __version__ = "0.5.0"
@@ -30,10 +36,13 @@ __all__ = [
     "MemeplotlibConfig",
     "OverlaySpec",
     "Template",
+    "TemplateNotFoundError",
     "TemplateRegistry",
+    "TextPosition",
     "__version__",
     "build_memegen_url",
     "config",
+    "get_alt_text",
     "meme",
     "memify",
     "rc_context",

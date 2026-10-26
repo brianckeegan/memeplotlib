@@ -18,7 +18,9 @@ Query parameters cover:
   ``style=`` value, so repeated parameters are ignored upstream)
 - ``font`` — memegen-side font alias (e.g. ``"impact"``, ``"thick"``,
   ``"comic"``); see :data:`MEMEGEN_FONT_ALIASES`
-- ``color`` — ``"fg"`` or ``"fg,bg"`` (HTML name or hex)
+- ``color`` — one text color per caption line, comma-separated
+  (``"white"`` or ``"white,red"``; HTML name or hex). memegen always draws
+  a black outline; there is no outline color parameter.
 - ``width`` / ``height`` — output dimensions in pixels
 - ``layout`` — alternate layout (e.g. ``"top"``)
 - ``background`` — custom background image URL
@@ -36,22 +38,28 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-# memegen-side font aliases. Distinct from the matplotlib/Pillow font map in
-# `_rendering._FONT_MAP` because memegen accepts a specific named set served by
-# the upstream `/fonts/` endpoint. Keys are the user-facing names accepted by
-# memeplotlib; values are the strings memegen recognises in the `font=` query.
+# memegen-side font names. Distinct from the matplotlib/Pillow font map in
+# `_rendering._FONT_MAP` because memegen accepts a specific set served by the
+# upstream `/fonts/` endpoint: each font's ID plus its short alias. Keys are
+# the user-facing names accepted by memeplotlib; values are the strings sent
+# in the `font=` query. "default" maps to "" -- send no `font=` at all, so
+# each template keeps the fonts it was designed with.
 MEMEGEN_FONT_ALIASES: dict[str, str] = {
+    "default": "",
     "impact": "impact",
     "thick": "thick",
+    "titilliumweb": "titilliumweb",
     "thin": "thin",
+    "titilliumweb-thin": "titilliumweb-thin",
     "tiny": "tiny",
+    "segoe": "segoe",
     "comic": "comic",
-    "notosans": "notosans",
     "kalam": "kalam",
-    "he": "he",
+    "notosans": "notosans",
     "jp": "jp",
-    "tw": "tw",
-    "default": "impact",
+    "hgminchob": "hgminchob",
+    "he": "he",
+    "notosanshebrew": "notosanshebrew",
 }
 
 
@@ -84,9 +92,10 @@ def memegen_font_for(font: str) -> str | None:
     Returns
     -------
     str or None
-        The memegen-side alias, or ``None`` if the font has no memegen
-        equivalent (in which case the caller should fall back to the
-        Pillow renderer).
+        The memegen-side name; ``""`` for ``"default"`` (send no ``font=``
+        and let the template choose); or ``None`` if the font has no
+        memegen equivalent (in which case the caller should fall back to
+        the Pillow renderer).
 
     Examples
     --------
@@ -94,6 +103,8 @@ def memegen_font_for(font: str) -> str | None:
     'impact'
     >>> memegen_font_for("Comic")
     'comic'
+    >>> memegen_font_for("default")
+    ''
     >>> memegen_font_for("arial") is None
     True
     """
@@ -156,7 +167,11 @@ def build_memegen_url(
     font : str or None, optional
         memegen font alias (see :data:`MEMEGEN_FONT_ALIASES`).
     color : str or None, optional
-        ``"fg"`` or ``"fg,bg"`` colour spec (HTML name or hex).
+        Text colors, one per caption line, comma-separated (e.g.
+        ``"white"`` or ``"white,red"``; HTML names or hex). memegen applies
+        a single value to line 1 only; lines without a value keep the
+        template's color. (The ``meme()`` dispatcher repeats a single
+        ``color`` for every line before calling this.)
     width : int or None, optional
         Output width in pixels.
     height : int or None, optional
