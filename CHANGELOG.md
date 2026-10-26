@@ -4,6 +4,93 @@ All notable changes to memeplotlib are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project
 adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] — 2026-10-26
+
+This release comes out of a full accessibility, consistency, documentation
+and performance review, plus a check against current upstream memegen. It
+adds alt text for every meme, brings the memegen backend back in line with
+the upstream API, ports the MCP server to mcp 2.x and makes it return real
+image content, and fixes a set of rendering and CLI rough edges.
+
+### Breaking
+
+- **MCP `meme` tool returns image content** (#91). The tool now returns an
+  MCP image block plus a text block with `{"path", "alt_text"}`, and the same
+  dict as structured content. The `base64_png` key is gone: read the image
+  content block instead.
+- **The `[mcp]` extra requires mcp 2.x** (#91): `mcp>=2,<3` (was
+  `mcp>=1.0,<2`). The server uses `MCPServer`, mcp 2's rename of `FastMCP`.
+- **`**text_kwargs` under `backend="auto"` select the matplotlib backend**
+  (#54), the only one that can apply them. Under an explicit `"memegen"` or
+  `"pillow"` backend they are ignored with a `UserWarning` instead of
+  silently.
+- **memegen keeps each template's own font and colors by default** (#79,
+  #80). memeplotlib no longer sends `font=` and `color=` unless you set them,
+  so memegen renders match memegen.link.
+- **Thicker Pillow outlines on large templates** (#90). The Pillow stroke
+  now scales with font size (`font_size * outline_width / 24`; the default
+  2.0 matches memegen's size / 12) instead of a fixed pixel width.
+
+### Added
+
+- **Alt text** (#69). `meme()`, `memify()` and `Meme` generate a description
+  from the template and captions (override with `alt_text=`). Read it with
+  `get_alt_text(fig)`; `savefig` embeds it as PNG/SVG `Description` or PDF
+  `Subject`, and the CLI and MCP tool return it.
+- **memegen API key** (#86). Set `config["api_key"]` or `MEMEPLOTLIB_API_KEY`
+  to send `X-API-KEY` (only to the configured API base) and remove the
+  watermark.
+- **Template caption geometry** (#92). Pillow and matplotlib renders place
+  captions in each template's real text boxes for 67 templates whose boxes
+  aren't top/bottom (`gru`, `db`, `woman-cat`, ...), from a snapshot of
+  upstream `config.yml` files. `scripts/update_template_geometry.py`
+  regenerates it.
+- **Per-line overrides** for `outline_color`, `outline_width` and `style` on
+  `Meme.line` (#76).
+- **Full `meme()` surface in the MCP tool and CLI** (#49): `lines` for 3+
+  slot templates and all styling and memegen options.
+- **Warnings** for caption lines with no slot to render into (#55) and for
+  captions that can't fit even at the minimum font size (#68).
+- `TemplateNotFoundError` (now a `LookupError`) and `TextPosition` are
+  exported, and not-found errors suggest how to search (#70).
+
+### Fixed
+
+- memegen backend drift from upstream:
+  - `color=` is per line (#80)
+  - the font list is current (#79)
+  - overlays are comma-joined into one `style=` (#81)
+  - `background=` renders use the `custom` template (#84)
+  - non-upper caption styles route to Pillow (#85)
+  - an underscore followed by a space encodes like upstream (#78)
+  - `config.*` cache artifacts are dropped from `Template.styles` (#77)
+  - animated GIF/WebP responses show their last frame, where every caption
+    is visible (#83)
+  - renders memegen rejects with 422 fall back to Pillow with a warning (#82)
+- `Meme` forces Pillow for `fontsize` and outline knobs like `meme()` does
+  (#52), and re-renders after edits instead of reusing a stale figure (#53).
+- `TemplateCache` honors `config["cache_dir"]` (#51).
+- The CLI reports errors on one stderr line, and `info` resolves through the
+  cached catalog (#50).
+- The MCP server writes its banner to stderr instead of the JSON-RPC stdout
+  channel (#47) and closes the figures each call opens (#48).
+
+### Performance
+
+- One HTTP session per thread instead of one per request (#71).
+- One process-wide image cache, decoding each download once (#72).
+- Cached Pillow font lookup and loading (#73).
+
+### Documentation and CI
+
+- Complete config table, descriptive alt text on doc images, a CLI and MCP
+  page, a rendering-backends guide, and corrected docstrings (#74, #75, #88).
+- `ci.yml` is lint-only (ruff, black, `mypy --strict`). The full Python
+  3.10–3.13 × Linux/macOS/Windows matrix, docs build and wheel check moved to
+  `release-tests.yml`, which gates every PyPI publish (#26). Image baselines
+  are kept for matplotlib >= 3.11 and, under `tests/baseline/mpl-pre-3.11/`,
+  for older matplotlib.
+
 ## [0.5.0] — 2026-04-28
 
 This release rewires the rendering pipeline around the memegen API. By

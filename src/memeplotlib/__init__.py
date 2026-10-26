@@ -29,7 +29,7 @@ from memeplotlib._template import (
 )
 from memeplotlib._url import OverlaySpec, build_memegen_url
 
-__version__ = "0.5.0"
+__version__ = "0.6.0"
 
 __all__ = [
     "Meme",
