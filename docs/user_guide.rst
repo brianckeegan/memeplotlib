@@ -302,6 +302,26 @@ To disable caching entirely:
    import memeplotlib as memes
    memes.config["cache_enabled"] = False
 
+memegen API Key
+----------------
+
+memegen adds a small "Memegen.link" watermark to rendered images. If you
+have a memegen API key with image access, memeplotlib sends it in the
+``X-API-KEY`` header and asks for the watermark to be removed:
+
+.. code-block:: bash
+
+   export MEMEPLOTLIB_API_KEY=...   # preferred: keeps the key out of code
+
+or, per session:
+
+.. code-block:: python
+
+   memes.config["api_key"] = "..."
+
+The key is only sent to ``config["api_base"]``, never to other image
+hosts, never placed in URLs, and masked in ``repr(memes.config)``.
+
 Rendering onto Existing Axes
 -----------------------------
 
