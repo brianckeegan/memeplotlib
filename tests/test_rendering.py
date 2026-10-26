@@ -216,6 +216,25 @@ class TestRenderMemify:
             render_memify(fig, ["text"], position="diagonal")
 
 
+class TestUnfittableCaptionWarning:
+    _LONG = " ".join(["unreasonably"] * 120)
+
+    def test_matplotlib_backend_warns_for_unfittable_caption(self, sample_template):
+        with pytest.warns(UserWarning, match="does not fit its text box") as record:
+            render_meme(sample_template, [self._LONG])
+        assert record[0].filename == __file__
+
+    def test_pillow_backend_warns_for_unfittable_caption(self, sample_template):
+        with pytest.warns(UserWarning, match="does not fit its text box") as record:
+            render_meme(sample_template, [self._LONG], backend="pillow")
+        assert record[0].filename == __file__
+
+    @pytest.mark.parametrize("backend", ["matplotlib", "pillow"])
+    def test_short_caption_does_not_warn(self, sample_template, backend, recwarn):
+        render_meme(sample_template, ["short", "caption"], backend=backend)
+        assert not [w for w in recwarn if "does not fit" in str(w.message)]
+
+
 class TestDroppedLinesWarning:
     def test_extra_lines_warn(self, sample_template):
         with pytest.warns(UserWarning, match=r"2 caption slot\(s\); ignoring extra text: 'three'"):

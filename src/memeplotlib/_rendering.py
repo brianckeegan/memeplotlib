@@ -36,7 +36,7 @@ from PIL import Image
 
 from memeplotlib._cache import TemplateCache
 from memeplotlib._config import DEFAULT_FIGSIZE_WIDTH, config
-from memeplotlib._pillow import render_pillow
+from memeplotlib._pillow import render_pillow, warn_unfittable
 from memeplotlib._template import (
     DEFAULT_TEXT_POSITIONS,
     Template,
@@ -237,16 +237,19 @@ def _fit_text_to_box(
         return  # detached axes; nothing to render against
     renderer = _get_renderer(fig)
 
-    for _ in range(_FIT_MAX_ITERATIONS):
+    def measure() -> tuple[float, float]:
         bbox = txt.get_window_extent(renderer=renderer)
         # Convert to axes fraction
-        inv = ax.transAxes.inverted()
-        bbox_axes = bbox.transformed(inv)
-        text_w = bbox_axes.width
-        text_h = bbox_axes.height
+        bbox_axes = bbox.transformed(ax.transAxes.inverted())
+        return bbox_axes.width, bbox_axes.height
 
-        if text_w <= box_w * _FIT_TOLERANCE and text_h <= box_h * _FIT_TOLERANCE:
-            break
+    def fits(w: float, h: float) -> bool:
+        return w <= box_w * _FIT_TOLERANCE and h <= box_h * _FIT_TOLERANCE
+
+    for _ in range(_FIT_MAX_ITERATIONS):
+        text_w, text_h = measure()
+        if fits(text_w, text_h):
+            return
 
         # mpl's Text.get_fontsize() is annotated as float|str, but it returns
         # a numeric size at runtime once the text has been added to an axes.
@@ -261,6 +264,9 @@ def _fit_text_to_box(
         )
         new_size = max(min_fontsize, current * scale * _FIT_SHRINK_FACTOR)
         txt.set_fontsize(new_size)
+
+    if float(txt.get_fontsize()) <= min_fontsize and not fits(*measure()):
+        warn_unfittable(txt.get_text())
 
 
 # --- Core drawing ---
