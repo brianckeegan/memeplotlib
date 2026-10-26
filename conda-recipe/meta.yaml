@@ -5,9 +5,11 @@ package:
   name: {{ name|lower }}
   version: {{ version }}
 
+# Build from the checkout the workflow is running on (the release tag
+# for a release event). conda-build's Jinja has no ``github`` context, so
+# a git_url built from ``github.repository`` is not a real repository URL.
 source:
-  git_url: https://github.com/{{ github.repository }}.git
-  git_rev: {{ environ.get('GIT_DESCRIBE_TAG', 'main') }}
+  path: ..
 
 build:
   noarch: python
