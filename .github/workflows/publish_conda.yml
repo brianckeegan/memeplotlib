@@ -30,9 +30,16 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Set up Miniconda
+      # Miniforge rather than Anaconda's Miniconda: it uses conda-forge only
+      # (no implicit `defaults` channel, which setup-miniconda warns about)
+      # and doesn't bundle the conda-pypi plugin behind the "Did you know?"
+      # notice. Everything this job installs comes from conda-forge anyway.
+      - name: Set up Miniforge
         uses: conda-incubator/setup-miniconda@v4
         with:
+          miniforge-version: latest
+          channels: conda-forge
+          conda-remove-defaults: "true"
           auto-update-conda: true
           activate-environment: build
           python-version: "3.10"
