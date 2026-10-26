@@ -81,7 +81,7 @@ class TestBuildMemegenUrl:
 
     def test_layout_and_background(self):
         url = build_memegen_url(
-            "buzz",
+            "custom",
             ["a", "b"],
             api_base=API_BASE,
             layout="top",
@@ -125,8 +125,19 @@ class TestMemegenFontFor:
     def test_case_insensitive(self):
         assert memegen_font_for("Comic") == "comic"
 
-    def test_default_alias(self):
-        assert memegen_font_for("default") == "impact"
+    def test_default_means_template_font(self):
+        # "" = send no font= so each template keeps its designed font.
+        assert memegen_font_for("default") == ""
+
+    @pytest.mark.parametrize(
+        "font", ["thick", "titilliumweb", "thin", "tiny", "segoe", "kalam", "hgminchob"]
+    )
+    def test_live_upstream_fonts_are_known(self, font):
+        assert memegen_font_for(font) == font
+
+    def test_tw_is_not_a_memegen_font(self):
+        # memegen returns 422 for font=tw.
+        assert memegen_font_for("tw") is None
 
     def test_unknown_font_returns_none(self):
         assert memegen_font_for("arial") is None
@@ -135,3 +146,54 @@ class TestMemegenFontFor:
         # Sanity check that the documented set is present.
         for name in ("impact", "thick", "thin", "tiny", "comic", "notosans", "kalam"):
             assert name in MEMEGEN_FONT_ALIASES
+
+
+class TestBackgroundOnlyOnCustom:
+    def test_background_on_other_template_warns(self):
+        with pytest.warns(UserWarning, match="only|except on the 'custom'"):
+            build_memegen_url("fine", ["a"], api_base=API_BASE, background="https://x/bg.png")
+
+
+class TestOverlayStyleJoining:
+    """memegen reads one style= value; overlays must be comma-joined."""
+
+    def test_multiple_overlays_are_comma_joined(self):
+        url = build_memegen_url(
+            "drake",
+            ["a", "b"],
+            api_base=API_BASE,
+            overlays=[{"style": "https://x/a.png"}, {"style": "https://x/b.png"}],
+        )
+        assert url.count("style=") == 1
+        assert "style=https://x/a.png,https://x/b.png" in url
+
+    def test_center_scale_only_from_first_overlay(self):
+        with pytest.warns(UserWarning, match="first overlay only"):
+            url = build_memegen_url(
+                "drake",
+                ["a"],
+                api_base=API_BASE,
+                overlays=[
+                    {"style": "https://x/a.png", "center": (0.2, 0.3), "scale": 0.5},
+                    {"style": "https://x/b.png", "center": (0.8, 0.8)},
+                ],
+            )
+        assert url.count("center=") == 1 and "center=0.2,0.3" in url
+        assert url.count("scale=") == 1
+
+    def test_template_style_wins_over_overlays_with_warning(self):
+        with pytest.warns(UserWarning, match="cannot combine template_style"):
+            url = build_memegen_url(
+                "ds",
+                ["a"],
+                api_base=API_BASE,
+                template_style="maga",
+                overlays=[{"style": "https://x/a.png"}],
+            )
+        assert "style=maga" in url and "x/a.png" not in url
+
+    def test_center_without_url_positions_builtin_overlay(self):
+        url = build_memegen_url(
+            "pigeon", ["a"], api_base=API_BASE, overlays=[{"center": (0.4, 0.6)}]
+        )
+        assert "style=" not in url and "center=0.4,0.6" in url

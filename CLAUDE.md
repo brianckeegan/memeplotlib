@@ -19,6 +19,7 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
 | `_url.py` | memegen URL builder: `build_memegen_url`, `OverlaySpec`, `MEMEGEN_FONT_ALIASES`, `memegen_font_for`. |
 | `_rendering.py` | Three-backend dispatcher (`render_meme` / `render_memify`): server-side memegen URL fetch, Pillow client-side draw, and the legacy matplotlib `Axes.text` path. Backend auto-selection lives in `_select_backend`. |
 | `_pillow.py` | Pillow renderer: TTF resolution, multiline shrink-to-fit via `ImageDraw.textbbox`, stroke-aware caption drawing. |
+| `_alt.py` | Alt text: generated descriptions for `meme`/`memify`/`Meme`, `get_alt_text`, and savefig metadata (PNG/SVG `Description`, PDF `Subject`). |
 | `_text.py` | Text styling helpers (`upper`/`lower`/`none`) and memegen URL encoding (`encode_text_for_url`). |
 | `_config.py` | RcParams-style `MemeplotlibConfig` mapping + `rc_context` context manager. |
 | `_cache.py` | Two-level cache: in-memory LRU + disk cache via `platformdirs`. Caches both blanks and memegen-rendered URLs (keyed by URL hash). |
@@ -47,9 +48,10 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
   to the module-private `_UNSET` sentinel — never `None` — so the
   dispatcher can tell "user passed it" from "user accepted the default".
 - **Forward `**kwargs` to `Axes.text`** under the matplotlib backend only.
-  Passing any `**text_kwargs` under `backend="auto"` forces the Pillow
-  fallback; under `backend="memegen"` they are silently ignored (memegen
-  has no equivalent).
+  Passing any `**text_kwargs` under `backend="auto"` selects the
+  matplotlib backend (the only one that can apply them); under an
+  explicit `backend="memegen"` or `"pillow"` they are ignored with a
+  `UserWarning`.
 - **memegen never honours custom outlines**: any non-default
   `outline_color` / `outline_width` forces the Pillow backend under
   `auto`. memegen always renders a hard-coded black stroke.
@@ -167,10 +169,12 @@ memeplotlib-mcp   # reads JSON-RPC on stdin
 - **`responses` doesn't model timeout / connection errors** — use
   `pytest-httpserver` for retry-and-timeout tests, opt out of the global
   socket block with `@pytest.mark.allow_network`.
-- **`cache_enabled = True` in tests will read from the user's real
-  cache directory.** Tests touching the registry should
-  `monkeypatch.setitem(config, "cache_enabled", False)` and supply a
-  `tmp_path` cache dir. `Template.get_image()` honours
+- **`config["cache_dir"]` is resolved lazily** by `TemplateCache` when
+  no explicit `cache_dir` is passed. The autouse `_isolated_cache_dir`
+  fixture in `tests/conftest.py` points it at `tmp_path`, so tests never
+  touch the user's real cache. Tests touching the registry should still
+  `monkeypatch.setitem(config, "cache_enabled", False)` when they need
+  a guaranteed cache miss. `Template.get_image()` honours
   `config["cache_enabled"]` so disabling at the config level is
   sufficient — you do not also need to construct a fresh `TemplateCache`.
 - **memegen rendered URLs are dynamic** — the path embeds caption text,

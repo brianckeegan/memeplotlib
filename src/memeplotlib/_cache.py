@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import json
+import threading
 import time
 from collections import OrderedDict
 from pathlib import Path
@@ -12,6 +14,8 @@ from typing import Any, cast
 import numpy as np
 import platformdirs
 from PIL import Image
+
+from memeplotlib._config import config
 
 
 def _default_cache_dir() -> Path:
@@ -27,8 +31,10 @@ class TemplateCache:
     Parameters
     ----------
     cache_dir : Path or None, optional
-        Directory for on-disk cache files. Uses the platform default
-        (via :mod:`platformdirs`) if ``None``.
+        Directory for on-disk cache files. If ``None``, the directory is
+        resolved on every access from ``config["cache_dir"]``, falling back
+        to the platform default (via :mod:`platformdirs`), so changing the
+        config takes effect without rebuilding the cache.
     max_memory : int, optional
         Maximum number of images to keep in the in-memory LRU cache
         (default: 50).
@@ -39,10 +45,22 @@ class TemplateCache:
         cache_dir: Path | None = None,
         max_memory: int = 50,
     ):
-        self._cache_dir = cache_dir or _default_cache_dir()
-        self._images_dir = self._cache_dir / "images"
+        self._explicit_dir = Path(cache_dir) if cache_dir is not None else None
         self._memory: OrderedDict[str, np.ndarray] = OrderedDict()
         self._max_memory = max_memory
+
+    @property
+    def _cache_dir(self) -> Path:
+        if self._explicit_dir is not None:
+            return self._explicit_dir
+        configured = config["cache_dir"]
+        if configured:
+            return Path(configured).expanduser()
+        return _default_cache_dir()
+
+    @property
+    def _images_dir(self) -> Path:
+        return self._cache_dir / "images"
 
     def _ensure_dirs(self) -> None:
         """Create cache directories if they don't exist."""
@@ -139,7 +157,7 @@ class TemplateCache:
 
         return None
 
-    def set_image(self, url: str, image_bytes: bytes) -> None:
+    def set_image(self, url: str, image_bytes: bytes) -> np.ndarray | None:
         """Cache template image to disk and memory.
 
         Parameters
@@ -148,6 +166,13 @@ class TemplateCache:
             The image URL used as the cache key.
         image_bytes : bytes
             Raw image file bytes to store.
+
+        Returns
+        -------
+        numpy.ndarray or None
+            The decoded RGBA array (decoded once, from memory), or ``None``
+            if the bytes are not a readable image. Callers should use it
+            rather than decoding *image_bytes* a second time.
         """
         self._ensure_dirs()
         key = self._image_key(url)
@@ -156,12 +181,13 @@ class TemplateCache:
         disk_path = self._images_dir / f"{key}.png"
         disk_path.write_bytes(image_bytes)
 
-        # Load into memory as numpy array
+        # Decode from the bytes already in memory, not by re-reading the file.
         try:
-            img = np.array(Image.open(disk_path).convert("RGBA"))
-            self._memory_put(key, img)
+            img = np.array(Image.open(io.BytesIO(image_bytes)).convert("RGBA"))
         except (OSError, Image.DecompressionBombError):
-            pass
+            return None
+        self._memory_put(key, img)
+        return img
 
     def _memory_put(self, key: str, value: np.ndarray) -> None:
         """Add to in-memory LRU cache, evicting oldest if at capacity."""
@@ -179,3 +205,22 @@ class TemplateCache:
             import shutil
 
             shutil.rmtree(self._cache_dir)
+
+
+_default_cache: TemplateCache | None = None
+_default_cache_lock = threading.Lock()
+
+
+def default_cache() -> TemplateCache:
+    """Return the process-wide cache shared by ``meme()``, ``Meme``, and registries.
+
+    Sharing one instance means the in-memory LRU actually serves repeat
+    renders (e.g. a loop of ``Meme("buzz", ...)`` calls) instead of each
+    object re-reading and re-decoding images from disk.
+    """
+    global _default_cache
+    if _default_cache is None:
+        with _default_cache_lock:
+            if _default_cache is None:
+                _default_cache = TemplateCache()
+    return _default_cache
