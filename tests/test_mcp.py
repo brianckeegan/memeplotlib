@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import base64
 import io
+import json
 
 import numpy as np
 import pytest
@@ -59,7 +61,7 @@ class TestServerSurface:
 
 class TestRenderMemeTool:
     @responses.activate
-    def test_render_returns_path_and_base64(self, fake_png_bytes, tmp_path):
+    def test_render_returns_image_content_path_and_alt_text(self, fake_png_bytes, tmp_path):
         responses.add(responses.GET, f"{API_BASE}/templates/", json=[])
         responses.add(
             responses.GET,
@@ -87,11 +89,14 @@ class TestRenderMemeTool:
             bottom="world",
             out_path=str(out),
         )
-        assert result["path"] == str(out)
-        assert isinstance(result["base64_png"], str)
-        assert len(result["base64_png"]) > 100  # non-trivial content
-        assert out.exists()
-        assert result["alt_text"].startswith('Meme using the "Buzz" template.')
+        image, text = result.content
+        assert image.type == "image"
+        assert image.mime_type == "image/png"
+        assert base64.b64decode(image.data) == out.read_bytes()
+        assert result.structured_content["path"] == str(out)
+        assert result.structured_content["alt_text"].startswith('Meme using the "Buzz" template.')
+        # Clients that ignore structured content still get path + alt text.
+        assert json.loads(text.text) == result.structured_content
 
     @responses.activate
     def test_render_closes_its_figures(self, fake_png_bytes, tmp_path):
@@ -158,8 +163,8 @@ class TestRenderMemeTool:
         )
 
         result = _mcp.render_meme_tool(template="buzz", top="hi")
-        assert result["path"].endswith(".png")
-        assert "memeplotlib-" in result["path"]
+        assert result.structured_content["path"].endswith(".png")
+        assert "memeplotlib-" in result.structured_content["path"]
 
 
 class TestSearchAndList:
@@ -212,7 +217,7 @@ class TestRenderMemeToolForwarding:
 
         def fake_meme(*args, **kwargs):
             calls.append((args, kwargs))
-            # The tool base64-encodes the saved file, so write a real PNG.
+            # The tool returns the saved file as image content, so write a real PNG.
             Image.new("RGB", (4, 4)).save(kwargs["savefig"])
             import matplotlib.pyplot as plt
 
@@ -260,3 +265,25 @@ class TestRenderMemeToolForwarding:
         _mcp.render_meme_tool(template="buzz", top="a", out_path=str(tmp_path / "a.png"))
         _, kwargs = spy[0]
         assert set(kwargs) == {"savefig", "show"}
+
+
+class TestWireFormat:
+    def test_call_tool_returns_image_and_structured_content(self, monkeypatch, tmp_path):
+        """Through the server: the image is a content block, not JSON text."""
+        import asyncio
+
+        def fake_meme(*args, **kwargs):
+            Image.new("RGB", (4, 4)).save(kwargs["savefig"])
+            import matplotlib.pyplot as plt
+
+            return plt.subplots()
+
+        monkeypatch.setattr(_mcp, "_meme", fake_meme)
+        out = tmp_path / "wire.jpg"
+        result = asyncio.run(
+            _mcp.server.call_tool("meme", {"template": "buzz", "top": "a", "out_path": str(out)})
+        )
+        assert [block.type for block in result.content] == ["image", "text"]
+        assert result.content[0].mime_type == "image/jpeg"
+        assert result.structured_content["path"] == str(out)
+        assert "base64_png" not in result.structured_content
