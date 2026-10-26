@@ -74,7 +74,12 @@ string when at least one parameter is supplied.
                   ``font="default"`` forces that. Fonts outside the set
                   fall through to the Pillow backend under
                   ``backend="auto"``.
-``color=``        ``"fg"`` or ``"fg,bg"``. HTML names or hex codes.
+``color=``        One text color per caption line, comma-separated
+                  (``"white,red"`` colors line 1 white and line 2 red).
+                  HTML names or hex codes. memegen's outline is always
+                  black. ``meme(color="yellow")`` repeats the color for
+                  every line; when no color is chosen, nothing is sent and
+                  each template keeps its own caption colors.
 ``width=``        Output width in pixels.
 ``height=``       Output height in pixels.
 ``layout=``       Alternate layout (e.g. ``top``).

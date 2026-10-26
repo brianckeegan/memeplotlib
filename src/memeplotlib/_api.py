@@ -78,7 +78,10 @@ def meme(
     font : str, optional
         Font family name (default ``config["font"]``).
     color : str, optional
-        Text fill color (default ``config["color"]``).
+        Text fill color for every caption (default ``config["color"]``).
+        On the memegen backend, a comma-separated list such as
+        ``"white,red"`` sets one color per line; when no color is chosen,
+        memegen templates keep their own caption colors.
     outline_color : str, optional
         Text outline color. Passing a non-default value under
         ``backend="auto"`` forces the Pillow backend, since memegen renders
