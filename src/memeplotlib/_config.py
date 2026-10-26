@@ -144,6 +144,7 @@ _VALIDATORS: dict[str, Callable[[Any], Any]] = {
     "height": _check_optional_non_negative_int("height"),
     "layout": _check_optional_str("layout"),
     "background": _check_optional_str("background"),
+    "api_key": _check_optional_str("api_key"),
 }
 
 
@@ -168,6 +169,7 @@ _DEFAULTS: dict[str, Any] = {
     "height": None,
     "layout": None,
     "background": None,
+    "api_key": None,
 }
 
 
@@ -221,7 +223,9 @@ class MemeplotlibConfig(MutableMapping[str, Any]):
         return len(self._data)
 
     def __repr__(self) -> str:
-        body = ",\n  ".join(f"{k!r}: {v!r}" for k, v in sorted(self._data.items()))
+        # Never echo the API key into logs, notebooks, or tracebacks.
+        shown = {k: ("'***'" if k == "api_key" and v else repr(v)) for k, v in self._data.items()}
+        body = ",\n  ".join(f"{k!r}: {v}" for k, v in sorted(shown.items()))
         return f"MemeplotlibConfig({{\n  {body}\n}})"
 
     def reset(self) -> None:

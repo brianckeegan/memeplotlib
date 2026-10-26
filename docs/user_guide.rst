@@ -130,6 +130,30 @@ The ``position`` parameter controls text layout:
    :alt: Bar chart with "NOT STONKS" at the bottom
    :width: 400px
 
+Accessibility: Alt Text
+------------------------
+
+A meme is text inside a picture, so screen-reader users need a text
+alternative. Every render records one, generated from the template name
+and the captions *as you typed them* (many screen readers spell out
+ALL-CAPS words letter by letter, so the upper-cased image text is not
+reused):
+
+.. code-block:: python
+
+   fig, ax = memes.meme("buzz", "memes", "memes everywhere")
+   memes.get_alt_text(fig)
+   # 'Meme using the "Buzz Lightyear" template. Top text: "memes".
+   #  Bottom text: "memes everywhere".'
+
+Pass ``alt_text=`` to :func:`~memeplotlib.meme`,
+:func:`~memeplotlib.memify`, or :class:`~memeplotlib.Meme` (or call
+:meth:`Meme.with_alt_text <memeplotlib.Meme.with_alt_text>`) to write your
+own. When memeplotlib saves the file (``savefig=`` or ``Meme.save``), the
+description is embedded as PNG/SVG ``Description`` or PDF ``Subject``
+metadata. The CLI accepts ``--alt-text`` and prints the description after
+saving, and the MCP ``meme`` tool returns it as ``alt_text``.
+
 Global Configuration
 ---------------------
 
@@ -255,8 +279,14 @@ a two-level strategy:
 2. **On-disk file cache** -- images stored as PNG files, catalog as JSON
    with a 24-hour TTL.
 
-The cache directory is determined by :mod:`platformdirs` (typically
+The cache directory is ``config["cache_dir"]`` when set, otherwise the
+platform default from :mod:`platformdirs` (typically
 ``~/.cache/memeplotlib`` on Linux, ``~/Library/Caches/memeplotlib`` on macOS).
+Changing ``config["cache_dir"]`` takes effect immediately:
+
+.. code-block:: python
+
+   memes.config["cache_dir"] = "/tmp/meme-cache"
 
 To clear the cache:
 
@@ -271,6 +301,26 @@ To disable caching entirely:
 
    import memeplotlib as memes
    memes.config["cache_enabled"] = False
+
+memegen API Key
+----------------
+
+memegen adds a small "Memegen.link" watermark to rendered images. If you
+have a memegen API key with image access, memeplotlib sends it in the
+``X-API-KEY`` header and asks for the watermark to be removed:
+
+.. code-block:: bash
+
+   export MEMEPLOTLIB_API_KEY=...   # preferred: keeps the key out of code
+
+or, per session:
+
+.. code-block:: python
+
+   memes.config["api_key"] = "..."
+
+The key is only sent to ``config["api_base"]``, never to other image
+hosts, never placed in URLs, and masked in ``repr(memes.config)``.
 
 Rendering onto Existing Axes
 -----------------------------

@@ -49,6 +49,11 @@ def encode_text_for_url(text: str) -> str:
     result = text
     for char, replacement in _ENCODE_MAP:
         result = result.replace(char, replacement)
+    # An underscore followed by a space would encode to "___", which memegen
+    # decodes as " _". Upstream emits "__-" for that case so the original
+    # "_ " round-trips (memegen app/utils/text.py, `has_trailing_under`).
+    if "_ " in text:
+        result = result.replace("___", "__-")
     return result
 
 

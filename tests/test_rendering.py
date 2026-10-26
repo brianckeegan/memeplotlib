@@ -171,7 +171,8 @@ class TestRenderMeme:
 
     def test_extra_lines_ignored(self, sample_template):
         # Template has 2 positions, 3 lines given — third should be ignored
-        fig, ax = render_meme(sample_template, ["one", "two", "three"])
+        with pytest.warns(UserWarning, match="caption slot"):
+            fig, ax = render_meme(sample_template, ["one", "two", "three"])
         texts = ax.texts
         assert len(texts) == 2
 
@@ -213,3 +214,91 @@ class TestRenderMemify:
         fig, ax = plt.subplots()
         with pytest.raises(ValueError, match="Invalid position"):
             render_memify(fig, ["text"], position="diagonal")
+
+
+class TestAnimatedMemegenResponses:
+    @staticmethod
+    def _gif(frames):
+        import io
+
+        from PIL import Image
+
+        imgs = [Image.new("RGB", (8, 8), c) for c in frames]
+        buf = io.BytesIO()
+        imgs[0].save(buf, format="GIF", save_all=True, append_images=imgs[1:], duration=50)
+        return buf.getvalue()
+
+    def test_animated_gif_shows_last_frame(self):
+        import io
+
+        import numpy as np
+        from PIL import Image
+
+        from memeplotlib._rendering import _still_frame
+
+        still = Image.open(io.BytesIO(_still_frame(self._gif(["black", "red"])))).convert("RGB")
+        assert tuple(np.array(still)[0, 0]) == (255, 0, 0)
+
+    def test_static_images_pass_through_unchanged(self):
+        from memeplotlib._rendering import _still_frame
+
+        single = self._gif(["blue"])
+        assert _still_frame(single) == single
+
+
+class TestUnfittableCaptionWarning:
+    _LONG = " ".join(["unreasonably"] * 120)
+
+    def test_matplotlib_backend_warns_for_unfittable_caption(self, sample_template):
+        with pytest.warns(UserWarning, match="does not fit its text box") as record:
+            render_meme(sample_template, [self._LONG])
+        assert record[0].filename == __file__
+
+    def test_pillow_backend_warns_for_unfittable_caption(self, sample_template):
+        with pytest.warns(UserWarning, match="does not fit its text box") as record:
+            render_meme(sample_template, [self._LONG], backend="pillow")
+        assert record[0].filename == __file__
+
+    @pytest.mark.parametrize("backend", ["matplotlib", "pillow"])
+    def test_short_caption_does_not_warn(self, sample_template, backend, recwarn):
+        render_meme(sample_template, ["short", "caption"], backend=backend)
+        assert not [w for w in recwarn if "does not fit" in str(w.message)]
+
+
+class TestDroppedLinesWarning:
+    def test_extra_lines_warn(self, sample_template):
+        with pytest.warns(UserWarning, match=r"2 caption slot\(s\); ignoring extra text: 'three'"):
+            render_meme(sample_template, ["one", "two", "three"])
+
+    def test_empty_extra_lines_do_not_warn(self, sample_template, recwarn):
+        render_meme(sample_template, ["one", "two", ""])
+        assert not [w for w in recwarn if "caption slot" in str(w.message)]
+
+    def test_memify_extra_lines_warn(self):
+        fig, _ = plt.subplots()
+        with pytest.warns(UserWarning, match="memify position 'top' has 1 caption slot"):
+            render_memify(fig, ["kept", "dropped"], position="top")
+
+    def test_warning_points_at_caller(self, sample_image_file):
+        from memeplotlib import meme
+
+        with pytest.warns(UserWarning, match="caption slot") as record:
+            meme(sample_image_file, "a", "b", "c")
+        assert record[0].filename == __file__
+
+
+class TestPillowFontCaching:
+    def test_font_path_lookup_is_cached(self):
+        from memeplotlib._pillow import _resolve_font_path
+
+        _resolve_font_path.cache_clear()
+        first = _resolve_font_path("no-such-font-anywhere")
+        assert _resolve_font_path("no-such-font-anywhere") == first
+        assert _resolve_font_path.cache_info().hits == 1
+
+    def test_loaded_fonts_are_reused(self):
+        from memeplotlib._pillow import _load_font, _resolve_font_path
+
+        path = _resolve_font_path("anton")
+        assert _load_font(path, 40) is _load_font(path, 40)
+        assert _load_font(path, 40) is not _load_font(path, 41)

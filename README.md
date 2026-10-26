@@ -97,6 +97,16 @@ memes.config["fontsize"] = 96
 memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
 ```
 
+**Alt text for screen readers:** every render gets a description built from
+the template and captions, embedded in saved PNG/SVG/PDF files:
+
+```python
+fig, ax = memes.meme("buzz", "memes", "memes everywhere", savefig="buzz.png")
+memes.get_alt_text(fig)
+# 'Meme using the "Buzz Lightyear" template. Top text: "memes". Bottom text: "memes everywhere".'
+memes.meme("buzz", "memes", alt_text="Buzz Lightyear pointing at memes everywhere")
+```
+
 ## Backends
 
 `memeplotlib` ships three rendering backends. The default `"auto"` policy
@@ -113,8 +123,10 @@ picks the best fit; pass `backend="..."` to override.
 - **`memegen`** — when the template comes from the memegen catalogue and the
   caller didn't pass `fontsize`, a non-default `outline_color` /
   `outline_width`, `**text_kwargs`, or per-line overrides.
+- **`matplotlib`** — when `**text_kwargs` (e.g. `rotation`, `alpha`) are
+  passed, since only `Axes.text` can apply them.
 - **`pillow`** — for custom local images / arbitrary URLs, or when any of
-  the above client-only features were requested.
+  the other client-only features above were requested.
 
 ```python
 # Default: memegen renders this server-side.
@@ -129,8 +141,8 @@ memes.meme("/path/to/photo.jpg", "top", "bottom", fontsize=48,
 from memeplotlib import Meme
 Meme("buzz").top("hi").line(1, "world", fontsize=72, color="yellow").save("out.png")
 
-# Legacy matplotlib path (preserves old behaviour exactly):
-memes.meme("buzz", "rotated", rotation=15, alpha=0.8, backend="matplotlib")
+# Axes.text kwargs select the matplotlib path automatically:
+memes.meme("buzz", "rotated", rotation=15, alpha=0.8)
 ```
 
 See [`docs/url_construction.rst`](docs/url_construction.rst) for the full
