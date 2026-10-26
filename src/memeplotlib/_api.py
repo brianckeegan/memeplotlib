@@ -87,7 +87,9 @@ def meme(
         ``backend="auto"`` forces the Pillow backend, since memegen renders
         a hard-coded black stroke.
     outline_width : float, optional
-        Outline stroke width. Passing a non-default value under
+        Outline stroke width. Under Pillow the stroke scales with the
+        fitted font size (each unit adds 1/24 of it, so the default 2.0
+        matches memegen's size / 12). Passing a non-default value under
         ``backend="auto"`` forces the Pillow backend.
     fontsize : float, optional
         Explicit font size. Forces the Pillow backend under

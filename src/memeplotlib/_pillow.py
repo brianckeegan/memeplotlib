@@ -58,6 +58,13 @@ _SYSTEM_FONT_DIRS = [
 _FIT_MIN_FONTSIZE = 8
 _FIT_MAX_ITERATIONS = 24
 _FIT_SHRINK_FACTOR = 0.92
+
+# Stroke width scales with the fitted font size: each unit of
+# ``outline_width`` adds 1/24 of the font size. The default
+# ``outline_width=2.0`` gives size / 12, the same ratio memegen uses
+# (``app/utils/images.py::get_stroke_width``), so large templates keep a
+# legible outline instead of a fixed-pixel hairline.
+_OUTLINE_FONTSIZE_DIVISOR = 24.0
 _WRAP_BASE_CHARS = 28
 
 
@@ -210,6 +217,13 @@ def warn_unfittable(text: str) -> None:
     )
 
 
+def _stroke_width(font_size: float, outline_width: float) -> int:
+    """Stroke width in pixels for *font_size*, scaled by *outline_width*."""
+    if outline_width <= 0:
+        return 0
+    return max(1, int(round(font_size * outline_width / _OUTLINE_FONTSIZE_DIVISOR)))
+
+
 def _draw_caption(
     img: Image.Image,
     text: str,
@@ -258,10 +272,7 @@ def _draw_caption(
         align = "center"
     anchor_y = box_y + (box_h - text_h) // 2
 
-    # Stroke width in pixels. The matplotlib path-effect uses
-    # `outline_width * 2` as the visual stroke; we mirror that here so
-    # rough visual parity holds across backends.
-    stroke = max(0, int(round(outline_width * 2)))
+    stroke = _stroke_width(pil_font.size, outline_width)
 
     draw = ImageDraw.Draw(img)
     draw.multiline_text(

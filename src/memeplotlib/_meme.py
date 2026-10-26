@@ -38,7 +38,8 @@ class Meme:
         Text outline color. Forces the Pillow backend under
         ``backend="auto"``, since memegen renders a hard-coded black stroke.
     outline_width : float or None, optional
-        Outline stroke width. Forces the Pillow backend under
+        Outline stroke width; under Pillow it scales with the fitted font
+        size (each unit adds 1/24 of it). Forces the Pillow backend under
         ``backend="auto"``.
     fontsize : float or None, optional
         Font size: points under the matplotlib backend, pixels at the
