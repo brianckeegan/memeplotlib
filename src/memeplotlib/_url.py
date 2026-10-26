@@ -34,22 +34,28 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-# memegen-side font aliases. Distinct from the matplotlib/Pillow font map in
-# `_rendering._FONT_MAP` because memegen accepts a specific named set served by
-# the upstream `/fonts/` endpoint. Keys are the user-facing names accepted by
-# memeplotlib; values are the strings memegen recognises in the `font=` query.
+# memegen-side font names. Distinct from the matplotlib/Pillow font map in
+# `_rendering._FONT_MAP` because memegen accepts a specific set served by the
+# upstream `/fonts/` endpoint: each font's ID plus its short alias. Keys are
+# the user-facing names accepted by memeplotlib; values are the strings sent
+# in the `font=` query. "default" maps to "" -- send no `font=` at all, so
+# each template keeps the fonts it was designed with.
 MEMEGEN_FONT_ALIASES: dict[str, str] = {
+    "default": "",
     "impact": "impact",
     "thick": "thick",
+    "titilliumweb": "titilliumweb",
     "thin": "thin",
+    "titilliumweb-thin": "titilliumweb-thin",
     "tiny": "tiny",
+    "segoe": "segoe",
     "comic": "comic",
-    "notosans": "notosans",
     "kalam": "kalam",
-    "he": "he",
+    "notosans": "notosans",
     "jp": "jp",
-    "tw": "tw",
-    "default": "impact",
+    "hgminchob": "hgminchob",
+    "he": "he",
+    "notosanshebrew": "notosanshebrew",
 }
 
 
@@ -78,9 +84,10 @@ def memegen_font_for(font: str) -> str | None:
     Returns
     -------
     str or None
-        The memegen-side alias, or ``None`` if the font has no memegen
-        equivalent (in which case the caller should fall back to the
-        Pillow renderer).
+        The memegen-side name; ``""`` for ``"default"`` (send no ``font=``
+        and let the template choose); or ``None`` if the font has no
+        memegen equivalent (in which case the caller should fall back to
+        the Pillow renderer).
 
     Examples
     --------
@@ -88,6 +95,8 @@ def memegen_font_for(font: str) -> str | None:
     'impact'
     >>> memegen_font_for("Comic")
     'comic'
+    >>> memegen_font_for("default")
+    ''
     >>> memegen_font_for("arial") is None
     True
     """
