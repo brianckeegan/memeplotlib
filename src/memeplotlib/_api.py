@@ -103,7 +103,9 @@ def meme(
         :meth:`matplotlib.axes.Axes.text`).
     extension : str, optional
         Output format requested from memegen -- ``"png"``, ``"jpg"``,
-        ``"gif"``, or ``"webp"``.
+        ``"gif"``, or ``"webp"``. Animated GIF/WebP responses are shown
+        as their last frame (where every timed caption is visible); the
+        figure cannot hold the animation.
     width, height : int, optional
         Output dimensions for memegen-rendered images.
     layout : str, optional
