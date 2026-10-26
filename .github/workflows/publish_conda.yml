@@ -41,12 +41,15 @@ jobs:
         shell: bash -el {0}
         run: conda install -y conda-build anaconda-client
 
+      # conda-build lives in the activated "build" env. Call its own entry
+      # point: the `conda build` subcommand is only found when conda-build
+      # is installed alongside the `conda` that runs it (the base env).
       - name: Build conda package
         id: build
         shell: bash -el {0}
         run: |
-          conda build conda-recipe
-          echo "package_path=$(conda build conda-recipe --output)" >> "$GITHUB_OUTPUT"
+          conda-build conda-recipe
+          echo "package_path=$(conda-build conda-recipe --output)" >> "$GITHUB_OUTPUT"
 
       - name: Upload package to Anaconda
         shell: bash -el {0}
