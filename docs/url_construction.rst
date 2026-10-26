@@ -84,7 +84,10 @@ string when at least one parameter is supplied.
 ``width=``        Output width in pixels.
 ``height=``       Output height in pixels.
 ``layout=``       Alternate layout (e.g. ``top``).
-``background=``   Custom background URL. Composes with ``style=<url>`` overlays.
+``background=``   Custom background URL. memegen honours it **only** on the
+                  ``custom`` template; :func:`~memeplotlib.meme` switches
+                  to ``custom`` automatically when ``background`` is set.
+                  Composes with ``style=<url>`` overlays.
 ``center=``       ``"x,y"`` overlay anchor (``[0, 1]`` floats). Applies to
                   the first overlay only.
 ``scale=``        Overlay scale factor. Applies to the first overlay only.
@@ -141,7 +144,7 @@ A custom-background ad-hoc overlay:
 .. code-block:: python
 
    build_memegen_url(
-       "fine",
+       "custom",  # the only template that honours background=
        ["this is fine"],
        api_base="https://api.memegen.link",
        background="https://example.com/bg.png",

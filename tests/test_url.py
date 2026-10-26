@@ -81,7 +81,7 @@ class TestBuildMemegenUrl:
 
     def test_layout_and_background(self):
         url = build_memegen_url(
-            "buzz",
+            "custom",
             ["a", "b"],
             api_base=API_BASE,
             layout="top",
@@ -146,6 +146,12 @@ class TestMemegenFontFor:
         # Sanity check that the documented set is present.
         for name in ("impact", "thick", "thin", "tiny", "comic", "notosans", "kalam"):
             assert name in MEMEGEN_FONT_ALIASES
+
+
+class TestBackgroundOnlyOnCustom:
+    def test_background_on_other_template_warns(self):
+        with pytest.warns(UserWarning, match="only|except on the 'custom'"):
+            build_memegen_url("fine", ["a"], api_base=API_BASE, background="https://x/bg.png")
 
 
 class TestOverlayStyleJoining:

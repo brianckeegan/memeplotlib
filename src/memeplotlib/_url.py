@@ -23,7 +23,8 @@ Query parameters cover:
   a black outline; there is no outline color parameter.
 - ``width`` / ``height`` — output dimensions in pixels
 - ``layout`` — alternate layout (e.g. ``"top"``)
-- ``background`` — custom background image URL
+- ``background`` — custom background image URL (only honoured by memegen's
+  ``custom`` template)
 """
 
 from __future__ import annotations
@@ -179,7 +180,9 @@ def build_memegen_url(
     layout : str or None, optional
         Alternate layout (e.g. ``"top"``).
     background : str or None, optional
-        Custom background image URL.
+        Custom background image URL. memegen only honours it when
+        *template_id* is ``"custom"``; a ``UserWarning`` is emitted
+        otherwise.
     overlays : sequence of OverlaySpec or None, optional
         Ad-hoc overlay placements.
 
@@ -215,6 +218,14 @@ def build_memegen_url(
     if ext not in _VALID_EXTENSIONS:
         raise ValueError(
             f"Unsupported extension {extension!r}. " f"Must be one of: {sorted(_VALID_EXTENSIONS)}"
+        )
+
+    if background is not None and template_id != "custom":
+        warnings.warn(
+            f"memegen ignores background= except on the 'custom' template; "
+            f"it will have no effect on {template_id!r}.",
+            UserWarning,
+            stacklevel=2,
         )
 
     base = api_base.rstrip("/")

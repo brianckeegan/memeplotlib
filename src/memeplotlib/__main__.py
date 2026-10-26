@@ -92,7 +92,7 @@ def _build_parser() -> argparse.ArgumentParser:
         sp.add_argument(
             "--background",
             default=None,
-            help="Custom background URL forwarded to memegen.",
+            help="Image URL that replaces the template image (memegen 'custom' template).",
         )
         sp.add_argument(
             "--alt-text",

@@ -109,7 +109,9 @@ def meme(
     layout : str, optional
         memegen layout (e.g. ``"top"``).
     background : str, optional
-        Custom background image URL for memegen.
+        Image URL to use **instead of** the template image (memegen
+        backend). memegen only supports this on its ``custom`` template,
+        so the render uses that template with your captions.
     overlays : sequence of dict, optional
         Ad-hoc overlay placements forwarded to memegen as repeated
         ``style=`` / ``center=`` / ``scale=`` query params.
