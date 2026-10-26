@@ -41,13 +41,29 @@ class Meme:
         Outline stroke width. Forces the Pillow backend under
         ``backend="auto"``.
     fontsize : float or None, optional
-        Font size in points. Forces the Pillow backend under
-        ``backend="auto"`` (memegen always auto-fits).
+        Font size: points under the matplotlib backend, pixels at the
+        template's native resolution (used as a maximum) under Pillow.
+        Forces the Pillow backend under ``backend="auto"`` (memegen always
+        auto-fits).
     style : str or None, optional
         Text transform -- ``"upper"``, ``"lower"``, or ``"none"``.
     backend : str or None, optional
         Override the rendering backend (``"auto"``, ``"memegen"``,
         ``"pillow"``, ``"matplotlib"``). ``None`` uses ``config["backend"]``.
+    extension : str or None, optional
+        Output format requested from memegen (``"png"``, ``"jpg"``,
+        ``"gif"``, ``"webp"``). memegen backend only.
+    width, height : int or None, optional
+        Output dimensions in pixels. memegen backend only.
+    layout : str or None, optional
+        memegen layout (e.g. ``"top"``). memegen backend only.
+    background : str or None, optional
+        Custom background image URL. memegen backend only.
+    overlays : sequence of OverlaySpec or None, optional
+        Ad-hoc overlay image placements. memegen backend only.
+    template_style : str or None, optional
+        memegen template-specific style (e.g. ``"maga"``). memegen backend
+        only.
     alt_text : str or None, optional
         Text alternative for screen-reader users. ``None`` generates one
         from the template name and captions; see :attr:`alt_text`.
