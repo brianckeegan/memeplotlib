@@ -13,18 +13,23 @@ with the special case that an empty line is rendered as a single underscore
 
 Query parameters cover:
 
-- ``style`` — template style name (e.g. ``"maga"`` for ``ds``) or an arbitrary
-  overlay image URL
+- ``style`` — template style name (e.g. ``"maga"`` for ``ds``), or one or
+  more overlay image URLs joined with commas (memegen reads only the first
+  ``style=`` value, so repeated parameters are ignored upstream)
 - ``font`` — memegen-side font alias (e.g. ``"impact"``, ``"thick"``,
   ``"comic"``); see :data:`MEMEGEN_FONT_ALIASES`
-- ``color`` — ``"fg"`` or ``"fg,bg"`` (HTML name or hex)
+- ``color`` — one text color per caption line, comma-separated
+  (``"white"`` or ``"white,red"``; HTML name or hex). memegen always draws
+  a black outline; there is no outline color parameter.
 - ``width`` / ``height`` — output dimensions in pixels
 - ``layout`` — alternate layout (e.g. ``"top"``)
-- ``background`` — custom background image URL
+- ``background`` — custom background image URL (only honoured by memegen's
+  ``custom`` template)
 """
 
 from __future__ import annotations
 
+import warnings
 from typing import TYPE_CHECKING, TypedDict
 from urllib.parse import quote
 
@@ -34,34 +39,44 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 
-# memegen-side font aliases. Distinct from the matplotlib/Pillow font map in
-# `_rendering._FONT_MAP` because memegen accepts a specific named set served by
-# the upstream `/fonts/` endpoint. Keys are the user-facing names accepted by
-# memeplotlib; values are the strings memegen recognises in the `font=` query.
+# memegen-side font names. Distinct from the matplotlib/Pillow font map in
+# `_rendering._FONT_MAP` because memegen accepts a specific set served by the
+# upstream `/fonts/` endpoint: each font's ID plus its short alias. Keys are
+# the user-facing names accepted by memeplotlib; values are the strings sent
+# in the `font=` query. "default" maps to "" -- send no `font=` at all, so
+# each template keeps the fonts it was designed with.
 MEMEGEN_FONT_ALIASES: dict[str, str] = {
+    "default": "",
     "impact": "impact",
     "thick": "thick",
+    "titilliumweb": "titilliumweb",
     "thin": "thin",
+    "titilliumweb-thin": "titilliumweb-thin",
     "tiny": "tiny",
+    "segoe": "segoe",
     "comic": "comic",
-    "notosans": "notosans",
     "kalam": "kalam",
-    "he": "he",
+    "notosans": "notosans",
     "jp": "jp",
-    "tw": "tw",
-    "default": "impact",
+    "hgminchob": "hgminchob",
+    "he": "he",
+    "notosanshebrew": "notosanshebrew",
 }
 
 
 class OverlaySpec(TypedDict, total=False):
-    """An ad-hoc overlay placement passed alongside a memegen render."""
+    """An ad-hoc overlay placement passed alongside a memegen render.
+
+    memegen accepts several overlay images but positions only the first:
+    ``center`` and ``scale`` on later overlays are ignored (with a warning).
+    """
 
     style: str
-    """Overlay image URL, or a template style name."""
+    """Overlay image URL."""
     center: tuple[float, float]
-    """Overlay anchor as ``(x, y)`` fractions in the range ``[0, 1]``."""
+    """Overlay anchor as ``(x, y)`` fractions in the range ``[0, 1]`` (first overlay only)."""
     scale: float
-    """Overlay scale factor."""
+    """Overlay scale factor (first overlay only)."""
 
 
 _VALID_EXTENSIONS = frozenset({"png", "jpg", "jpeg", "gif", "webp"})
@@ -78,9 +93,10 @@ def memegen_font_for(font: str) -> str | None:
     Returns
     -------
     str or None
-        The memegen-side alias, or ``None`` if the font has no memegen
-        equivalent (in which case the caller should fall back to the
-        Pillow renderer).
+        The memegen-side name; ``""`` for ``"default"`` (send no ``font=``
+        and let the template choose); or ``None`` if the font has no
+        memegen equivalent (in which case the caller should fall back to
+        the Pillow renderer).
 
     Examples
     --------
@@ -88,6 +104,8 @@ def memegen_font_for(font: str) -> str | None:
     'impact'
     >>> memegen_font_for("Comic")
     'comic'
+    >>> memegen_font_for("default")
+    ''
     >>> memegen_font_for("arial") is None
     True
     """
@@ -150,7 +168,11 @@ def build_memegen_url(
     font : str or None, optional
         memegen font alias (see :data:`MEMEGEN_FONT_ALIASES`).
     color : str or None, optional
-        ``"fg"`` or ``"fg,bg"`` colour spec (HTML name or hex).
+        Text colors, one per caption line, comma-separated (e.g.
+        ``"white"`` or ``"white,red"``; HTML names or hex). memegen applies
+        a single value to line 1 only; lines without a value keep the
+        template's color. (The ``meme()`` dispatcher repeats a single
+        ``color`` for every line before calling this.)
     width : int or None, optional
         Output width in pixels.
     height : int or None, optional
@@ -158,7 +180,9 @@ def build_memegen_url(
     layout : str or None, optional
         Alternate layout (e.g. ``"top"``).
     background : str or None, optional
-        Custom background image URL.
+        Custom background image URL. memegen only honours it when
+        *template_id* is ``"custom"``; a ``UserWarning`` is emitted
+        otherwise.
     overlays : sequence of OverlaySpec or None, optional
         Ad-hoc overlay placements.
 
@@ -196,6 +220,14 @@ def build_memegen_url(
             f"Unsupported extension {extension!r}. " f"Must be one of: {sorted(_VALID_EXTENSIONS)}"
         )
 
+    if background is not None and template_id != "custom":
+        warnings.warn(
+            f"memegen ignores background= except on the 'custom' template; "
+            f"it will have no effect on {template_id!r}.",
+            UserWarning,
+            stacklevel=2,
+        )
+
     base = api_base.rstrip("/")
     encoded = [_encode_segment(line) for line in lines]
     path = "/".join(encoded) if encoded else "_"
@@ -205,8 +237,23 @@ def build_memegen_url(
     # Build query string preserving insertion order (style, font, color first
     # to match the docs' usual presentation; remaining params follow).
     params: list[tuple[str, str]] = []
+
+    # memegen reads a single `style=` value: a template style name, or a
+    # comma-separated list of overlay URLs. It cannot mix the two, and it
+    # applies `center`/`scale` to the first overlay only.
+    overlay_urls = [ov["style"] for ov in overlays or [] if ov.get("style") is not None]
+    if template_style is not None and overlay_urls:
+        warnings.warn(
+            "memegen cannot combine template_style with overlay images; "
+            f"using template_style={template_style!r} and ignoring the overlay URLs.",
+            UserWarning,
+            stacklevel=2,
+        )
+        overlay_urls = []
     if template_style is not None:
         params.append(("style", template_style))
+    elif overlay_urls:
+        params.append(("style", ",".join(overlay_urls)))
     if font is not None:
         params.append(("font", font))
     if color is not None:
@@ -221,16 +268,22 @@ def build_memegen_url(
         params.append(("background", background))
 
     if overlays:
-        for ov in overlays:
-            ov_style = ov.get("style")
-            if ov_style is not None:
-                params.append(("style", ov_style))
-            ov_center = ov.get("center")
-            if ov_center is not None:
-                params.append(("center", f"{ov_center[0]},{ov_center[1]}"))
-            ov_scale = ov.get("scale")
-            if ov_scale is not None:
-                params.append(("scale", str(ov_scale)))
+        # center/scale also position a template's built-in overlay slot, so
+        # they are sent even when no overlay URL is given.
+        first, *rest = overlays
+        ov_center = first.get("center")
+        if ov_center is not None:
+            params.append(("center", f"{ov_center[0]},{ov_center[1]}"))
+        ov_scale = first.get("scale")
+        if ov_scale is not None:
+            params.append(("scale", str(ov_scale)))
+        if any(ov.get("center") is not None or ov.get("scale") is not None for ov in rest):
+            warnings.warn(
+                "memegen applies center/scale to the first overlay only; "
+                "ignoring them on later overlays.",
+                UserWarning,
+                stacklevel=2,
+            )
 
     if params:
         query = "&".join(f"{k}={_format_query_value(v)}" for k, v in params)
