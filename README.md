@@ -1,5 +1,4 @@
 [![CI](https://github.com/brianckeegan/memeplotlib/actions/workflows/ci.yml/badge.svg)](https://github.com/brianckeegan/memeplotlib/actions/workflows/ci.yml)
-[![codecov](https://codecov.io/gh/brianckeegan/memeplotlib/graph/badge.svg)](https://codecov.io/gh/brianckeegan/memeplotlib)
 [![Docs](https://img.shields.io/badge/docs-stable-blue.svg)](https://brianckeegan.github.io/memeplotlib/)
 [![PyPI version](https://img.shields.io/pypi/v/memeplotlib.svg)](https://pypi.org/project/memeplotlib/)
 [![conda version](https://img.shields.io/conda/vn/brianckeegan/memeplotlib.svg)](https://anaconda.org/brianckeegan/memeplotlib)
@@ -8,11 +7,7 @@
 
 ![memeplotlib logotype](/docs/_static/logo.png)
 
-Memes with Python's matplotlib. Create image-macro memes by either letting
-the [memegen](https://github.com/jacebrowning/memegen) API render them
-server-side (the default) or falling back to a local Pillow renderer when
-the API can't express what you want — custom local images, explicit per-line
-font sizes, custom outlines, or per-line position overrides.
+Memes with Python's matplotlib. Create image-macro memes by either letting the [memegen](https://github.com/jacebrowning/memegen) API render them server-side (the default) or falling back to a local Pillow renderer when the API can't express what you want — custom local images, explicit per-line font sizes, custom outlines, or per-line position overrides.
 
 ## Installation
 
@@ -177,21 +172,11 @@ sphinx-build -W docs docs/_build
 
 ## How it works
 
-1. Template metadata comes from the [memegen API](https://api.memegen.link)
-   (`/templates/`, `/templates/<id>`); blank backgrounds and rendered memes
-   alike are cached on disk.
-2. **Memegen backend** (default for memegen IDs): a fully-formed rendering
-   URL (`/images/<id>/<line_1>/.../<line_n>.<ext>?style=...&font=...`) is
-   built via `memeplotlib.build_memegen_url`. The composed image is fetched
-   and displayed with `Axes.imshow`.
-3. **Pillow backend** (default for custom images, or when client-only
-   features are requested): the blank is fetched once, then captions are
-   drawn with `PIL.ImageDraw` using stroke-aware text rendering and a
-   shrink-to-fit loop, and the composed RGBA array is `imshow`n.
-4. **Matplotlib backend** (legacy, opt-in): captions are drawn with
-   `Axes.text` plus `patheffects.Stroke` for the classic outlined look.
-5. The bundled Anton font (Impact-like, SIL OFL licensed) is used as a
-   fallback for systems where Impact isn't installed.
+1. Template metadata comes from the [memegen API](https://api.memegen.link) (`/templates/`, `/templates/<id>`); blank backgrounds and rendered memes alike are cached on disk.
+2. **Memegen backend** (default for memegen IDs): a fully-formed rendering URL (`/images/<id>/<line_1>/.../<line_n>.<ext>?style=...&font=...`) is built via `memeplotlib.build_memegen_url`. The composed image is fetched and displayed with `Axes.imshow`.
+3. **Pillow backend** (default for custom images, or when client-only features are requested): the blank is fetched once, then captions are drawn with `PIL.ImageDraw` using stroke-aware text rendering and a shrink-to-fit loop, and the composed RGBA array is `imshow`n.
+4. **Matplotlib backend** (legacy, opt-in): captions are drawn with `Axes.text` plus `patheffects.Stroke` for the classic outlined look.
+5. The bundled Anton font (Impact-like, SIL OFL licensed) is used as a fallback for systems where Impact isn't installed.
 
 ## Related projects
 
@@ -211,5 +196,4 @@ Requires Python 3.10+.
 
 ## License
 
-MIT. The bundled Anton font is licensed under the
-[SIL Open Font License v1.1](src/memeplotlib/fonts/OFL.txt).
+MIT. The bundled Anton font is licensed under the [SIL Open Font License v1.1](src/memeplotlib/fonts/OFL.txt).
