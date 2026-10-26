@@ -13,6 +13,7 @@ from memeplotlib._template import (
     TemplateNotFoundError,
     TemplateRegistry,
     TextPosition,
+    _default_text_positions,
     _resolve_template,
 )
 
@@ -328,3 +329,46 @@ class TestTemplateNotFoundErrorApi:
         assert "'buz' not found" in message
         assert "TemplateRegistry().search('buz')" in message
         assert "memeplotlib search buz" in message
+
+
+class TestVendoredGeometry:
+    def test_known_template_uses_upstream_boxes(self):
+        t = Template._from_api_data({"id": "gru", "lines": 4}, API_BASE)
+        # Gru's plan: four whiteboards in a 2x2 grid, not four full-width bands.
+        assert [(p.anchor_x, p.anchor_y) for p in t.text_positions] == [
+            (0.275, 0.2),
+            (0.78, 0.2),
+            (0.28, 0.7),
+            (0.78, 0.7),
+        ]
+
+    def test_line_count_mismatch_falls_back_to_guess(self):
+        # If upstream changes a template's line count, the stale snapshot
+        # must not be used.
+        t = Template._from_api_data({"id": "gru", "lines": 3}, API_BASE)
+        assert t.text_positions == _default_text_positions(3)
+
+    def test_unknown_template_uses_guess(self):
+        t = Template._from_api_data({"id": "buzz", "lines": 2}, API_BASE)
+        assert t.text_positions == list(DEFAULT_TEXT_POSITIONS)
+
+    def test_guess_uses_equal_bands_for_many_lines(self):
+        bands = _default_text_positions(4)
+        assert [p.anchor_y for p in bands] == [0.0, 0.25, 0.5, 0.75]
+        assert all(p.scale_x == 1.0 and p.scale_y == 0.25 for p in bands)
+
+    def test_snapshot_is_well_formed(self):
+        from memeplotlib._geometry import TEMPLATE_GEOMETRY
+
+        assert "gru" in TEMPLATE_GEOMETRY
+        for template_id, boxes in TEMPLATE_GEOMETRY.items():
+            assert boxes, template_id
+            assert boxes != tuple(_default_text_positions(len(boxes))), template_id
+            for box in boxes:
+                # Upstream nudges some rotated boxes slightly past the edge
+                # (handshake), so check that each box's center is on the image.
+                assert 0.0 <= box.anchor_x + box.scale_x / 2 <= 1.0, template_id
+                assert 0.0 <= box.anchor_y + box.scale_y / 2 <= 1.0, template_id
+                assert 0.0 < box.scale_x <= 1.0, template_id
+                assert 0.0 < box.scale_y <= 1.0, template_id
+                assert box.align in {"left", "center", "right"}, template_id

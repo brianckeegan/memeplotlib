@@ -16,6 +16,7 @@ re-exported from `memeplotlib/__init__.py`. The source lives under
 | `_api.py` | Functional API: `meme()`, `memify()`. Sentinel-based detection of user-supplied knobs feeds the dispatcher's `auto`-backend selector. |
 | `_meme.py` | OO API: `Meme` builder with chainable `top/bottom/text/line/with_backend` and a `render/show/save` cycle. |
 | `_template.py` | `Template`, `TemplateRegistry`, memegen client (retry-aware via `requests.Session` + `urllib3.Retry`). `Template` now carries `lines_count`, `overlays_count`, `styles`, `is_memegen`. |
+| `_geometry.py` | Generated snapshot of upstream caption boxes for templates where the top/bottom-or-bands guess is wrong. Regenerate with `python scripts/update_template_geometry.py`; never hand-edit. |
 | `_url.py` | memegen URL builder: `build_memegen_url`, `OverlaySpec`, `MEMEGEN_FONT_ALIASES`, `memegen_font_for`. |
 | `_rendering.py` | Three-backend dispatcher (`render_meme` / `render_memify`): server-side memegen URL fetch, Pillow client-side draw, and the legacy matplotlib `Axes.text` path. Backend auto-selection lives in `_select_backend`. |
 | `_pillow.py` | Pillow renderer: TTF resolution, multiline shrink-to-fit via `ImageDraw.textbbox`, stroke-aware caption drawing. |

@@ -287,6 +287,13 @@ caption can look slightly different across them; ``fontsize`` in
 particular is in points for matplotlib but in pixels of the template image
 for Pillow.
 
+The Pillow and matplotlib backends place captions in each template's text
+boxes. memegen's API doesn't publish those boxes, so memeplotlib ships a
+snapshot of them from the memegen repository for templates whose boxes
+aren't plain top/bottom (``gru``, ``db``, ``woman-cat``, and others). Any
+other template gets top/bottom boxes, or equal horizontal bands when it
+has three or more lines.
+
 Template Discovery
 -------------------
 
