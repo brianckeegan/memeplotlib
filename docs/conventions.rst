@@ -40,19 +40,20 @@ you want auto-display in a script.
 Forward ``**kwargs`` to ``Axes.text``
 --------------------------------------
 
-:func:`~memeplotlib.memify` and the ``backend="matplotlib"`` /
-``backend="pillow"`` paths of :func:`~memeplotlib.meme` accept extra
-``**kwargs`` that are passed through to :meth:`Axes.text` for each
-rendered caption. This lets you tweak ``alpha``, ``rotation``, ``zorder``,
+:func:`~memeplotlib.memify` and the ``backend="matplotlib"`` path of
+:func:`~memeplotlib.meme` accept extra ``**kwargs`` that are passed
+through to :meth:`Axes.text` for each rendered caption. This lets you tweak ``alpha``, ``rotation``, ``zorder``,
 or any other matplotlib text parameter without library-side support:
 
 .. code-block:: python
 
    memes.meme("buzz", "rotated", rotation=15, alpha=0.8, backend="matplotlib")
 
-Under ``backend="auto"``, passing any ``**text_kwargs`` forces the Pillow
-backend. memegen has no equivalent for arbitrary ``Axes.text`` arguments
-so they cannot be honoured by the server-side renderer.
+Under ``backend="auto"``, passing any ``**text_kwargs`` selects the
+matplotlib backend, the only renderer that draws with ``Axes.text``.
+Neither memegen nor Pillow has an equivalent, so an explicit
+``backend="memegen"`` or ``backend="pillow"`` ignores them and emits a
+``UserWarning``.
 
 Backends
 ---------
@@ -78,8 +79,8 @@ memeplotlib ships three rendering backends:
 The default ``"auto"`` selects ``"memegen"`` for memegen-catalogue
 templates with no client-only knobs, and ``"pillow"`` otherwise.
 Passing any of ``fontsize``, a non-default ``outline_color`` /
-``outline_width``, ``**text_kwargs``, or per-line overrides forces
-Pillow under ``auto``. See :doc:`url_construction` for the URL grammar.
+``outline_width``, or per-line overrides forces Pillow under ``auto``;
+passing ``**text_kwargs`` selects ``"matplotlib"``. See :doc:`url_construction` for the URL grammar.
 
 ``rc_context`` for scoped config overrides
 -------------------------------------------
