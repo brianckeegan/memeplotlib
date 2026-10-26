@@ -1,0 +1,38 @@
+name: Sync labels
+
+# Creates (or updates) the labels that dependabot.yml and
+# release-drafter.yml apply or sort by. Dependabot reports an error on
+# its PRs when a configured label doesn't exist, and release-drafter
+# can only categorize PRs by labels that exist. `--force` updates the
+# color and description of a label that already exists; labels not
+# listed here are left alone.
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/labels.yml]
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Create or update labels
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          while IFS='|' read -r name color description; do
+            gh label create "$name" --color "$color" --description "$description" --force
+          done <<'LABELS'
+          breaking|B60205|Breaking change; bumps the major version
+          feature|0E8A16|New feature; bumps the minor version
+          fix|D93F0B|Bug fix; bumps the patch version
+          docs|0075CA|Documentation only
+          internal|C5DEF5|Internal change: CI, tooling, refactors
+          chore|EDEDED|Maintenance, such as CI and tooling updates
+          dependencies|0366D6|Dependency updates (applied by Dependabot)
+          LABELS
